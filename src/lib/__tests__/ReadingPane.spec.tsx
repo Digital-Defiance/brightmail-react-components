@@ -84,6 +84,7 @@ jest.mock('../BrightMailContext', () => ({
     setSidebarOpen: jest.fn(),
     composeModal: { status: 'closed' },
     minimizeCompose: jest.fn(),
+    toggleMaximize: jest.fn(),
     closeCompose: jest.fn(),
     selectedEmailId: null,
     setSelectedEmailId: jest.fn(),

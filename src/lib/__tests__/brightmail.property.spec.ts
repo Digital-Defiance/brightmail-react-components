@@ -39,14 +39,42 @@ jest.mock('@digitaldefiance/suite-core-lib', () => ({
 
 jest.mock('@brightchain/brightchain-lib', () => {
   const actual: Record<string, unknown> = {};
-  // Provide the enums/values the component needs
   actual['BrightChainComponentId'] = 'brightchain';
   actual['BrightChainStrings'] = new Proxy(
     {},
     { get: (_target: unknown, prop: string | symbol) => String(prop) },
   );
+  actual['MessageEncryptionScheme'] = {
+    NONE: 'none',
+    SHARED_KEY: 'shared_key',
+    RECIPIENT_KEYS: 'recipient_keys',
+    S_MIME: 's_mime',
+  };
+  actual['MAX_ATTACHMENT_SIZE_BYTES'] = 25 * 1024 * 1024;
+  actual['formatFileSize'] = (bytes: number) => `${bytes} B`;
+  actual['validateAttachmentSize'] = (size: number, max: number) => size <= max;
+  actual['validateTotalAttachmentSize'] = (sizes: number[], max: number) =>
+    sizes.every((s: number) => s <= max) &&
+    sizes.reduce((a: number, b: number) => a + b, 0) <= max;
   return actual;
 });
+
+jest.mock('@tiptap/react', () => ({
+  useEditor: () => null,
+  EditorContent: () => null,
+}));
+jest.mock('@tiptap/starter-kit', () => ({
+  __esModule: true,
+  default: { configure: jest.fn() },
+}));
+jest.mock('@tiptap/extension-underline', () => ({
+  __esModule: true,
+  default: {},
+}));
+jest.mock('@tiptap/extension-link', () => ({
+  __esModule: true,
+  default: { configure: jest.fn() },
+}));
 
 jest.mock('@digitaldefiance/express-suite-react-components', () => ({
   useI18n: () => ({

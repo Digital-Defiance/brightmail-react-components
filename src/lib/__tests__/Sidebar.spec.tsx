@@ -21,6 +21,7 @@ jest.mock('../BrightMailContext', () => ({
     setSidebarOpen: jest.fn(),
     composeModal: { status: 'closed' },
     minimizeCompose: jest.fn(),
+    toggleMaximize: jest.fn(),
     closeCompose: jest.fn(),
     selectedEmailId: null,
     setSelectedEmailId: jest.fn(),
@@ -31,6 +32,23 @@ jest.mock('@brightchain/brightchain-react-components', () => ({
   BrightChainSubLogo: ({ subText }: { subText?: string }) => (
     <span data-testid="brightchain-sub-logo">{subText || 'SubLogo'}</span>
   ),
+}));
+
+jest.mock('@brightchain/brightmail-lib', () => ({
+  BrightMailStrings: new Proxy(
+    {},
+    { get: (_t: unknown, p: string | symbol) => String(p) },
+  ),
+}));
+
+jest.mock('@digitaldefiance/express-suite-react-components', () => ({
+  useI18n: () => ({
+    tComponent: (_componentId: string, key: string) => key,
+    t: (key: string) => key,
+    tBranded: (key: string) => key,
+    changeLanguage: jest.fn(),
+    currentLanguage: 'en',
+  }),
 }));
 
 // Import after mocks
@@ -76,11 +94,11 @@ describe('Sidebar', () => {
    */
   it('renders all navigation items', () => {
     renderSidebar();
-    expect(screen.getByText('Inbox')).toBeInTheDocument();
-    expect(screen.getByText('Sent')).toBeInTheDocument();
-    expect(screen.getByText('Drafts')).toBeInTheDocument();
-    expect(screen.getByText('Trash')).toBeInTheDocument();
-    expect(screen.getByText('Labels')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Inbox')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Sent')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Drafts')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Trash')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Labels')).toBeInTheDocument();
   });
 
   /**
@@ -88,9 +106,9 @@ describe('Sidebar', () => {
    */
   it('renders ComposeFAB with extended variant when sidebar is expanded', () => {
     renderSidebar({ variant: 'permanent', open: true });
-    const fab = screen.getByRole('button', { name: 'Compose' });
+    const fab = screen.getByRole('button', { name: 'Nav_Compose' });
     expect(fab).toBeInTheDocument();
-    expect(fab).toHaveTextContent('Compose');
+    expect(fab).toHaveTextContent('Nav_Compose');
   });
 
   /**
@@ -101,7 +119,7 @@ describe('Sidebar', () => {
     // When temporary and closed, the drawer is not visible,
     // so we test with temporary + open to see the FAB
     renderSidebar({ variant: 'temporary', open: true });
-    const fabs = screen.getAllByRole('button', { name: 'Compose' });
+    const fabs = screen.getAllByRole('button', { name: 'Nav_Compose' });
     // At least one FAB should be present
     expect(fabs.length).toBeGreaterThan(0);
   });
@@ -111,7 +129,7 @@ describe('Sidebar', () => {
    */
   it('calls openCompose when FAB is clicked', () => {
     renderSidebar();
-    fireEvent.click(screen.getByRole('button', { name: 'Compose' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nav_Compose' }));
     expect(mockOpenCompose).toHaveBeenCalledTimes(1);
   });
 
@@ -120,13 +138,13 @@ describe('Sidebar', () => {
    */
   it('highlights the active navigation item', () => {
     renderSidebar({ activeRoute: '/brightmail/sent' });
-    const sentItem = screen.getByText('Sent').closest('[role="menuitem"]');
+    const sentItem = screen.getByText('Nav_Sent').closest('[role="menuitem"]');
     expect(sentItem).toHaveClass('Mui-selected');
   });
 
   it('does not highlight non-active navigation items', () => {
     renderSidebar({ activeRoute: '/brightmail' });
-    const sentItem = screen.getByText('Sent').closest('[role="menuitem"]');
+    const sentItem = screen.getByText('Nav_Sent').closest('[role="menuitem"]');
     expect(sentItem).not.toHaveClass('Mui-selected');
   });
 
@@ -136,7 +154,7 @@ describe('Sidebar', () => {
   it('calls onNavigate with the route when a nav item is clicked', () => {
     const onNavigate = jest.fn();
     renderSidebar({ onNavigate });
-    fireEvent.click(screen.getByText('Sent'));
+    fireEvent.click(screen.getByText('Nav_Sent'));
     expect(onNavigate).toHaveBeenCalledWith('/brightmail/sent');
   });
 
@@ -146,7 +164,7 @@ describe('Sidebar', () => {
   it('calls onToggle after navigation in temporary variant', () => {
     const onToggle = jest.fn();
     renderSidebar({ variant: 'temporary', open: true, onToggle });
-    fireEvent.click(screen.getByText('Drafts'));
+    fireEvent.click(screen.getByText('Nav_Drafts'));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
@@ -162,7 +180,7 @@ describe('Sidebar', () => {
 
     // Press ArrowDown
     fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Mail folders' }),
+      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
       { key: 'ArrowDown' },
     );
     expect(document.activeElement).toBe(navItems[1]);
@@ -176,7 +194,7 @@ describe('Sidebar', () => {
 
     // Press ArrowUp
     fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Mail folders' }),
+      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
       { key: 'ArrowUp' },
     );
     expect(document.activeElement).toBe(navItems[0]);
@@ -189,7 +207,7 @@ describe('Sidebar', () => {
     navItems[navItems.length - 1].focus();
 
     fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Mail folders' }),
+      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
       { key: 'ArrowDown' },
     );
     expect(document.activeElement).toBe(navItems[0]);
@@ -202,7 +220,7 @@ describe('Sidebar', () => {
     navItems[0].focus();
 
     fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Mail folders' }),
+      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
       { key: 'ArrowUp' },
     );
     expect(document.activeElement).toBe(navItems[navItems.length - 1]);

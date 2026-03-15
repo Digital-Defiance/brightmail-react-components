@@ -65,6 +65,7 @@ describe('BrightMailContext', () => {
     expect(result.current.composeModal.status).toBe('open');
     if (result.current.composeModal.status === 'open') {
       expect(result.current.composeModal.minimized).toBe(false);
+      expect(result.current.composeModal.maximized).toBe(false);
       expect(result.current.composeModal.prefill).toBeUndefined();
     }
   });
@@ -98,6 +99,36 @@ describe('BrightMailContext', () => {
     const { result } = renderHook(() => useBrightMail(), { wrapper });
 
     act(() => result.current.minimizeCompose());
+    expect(result.current.composeModal).toEqual({ status: 'closed' });
+  });
+
+  it('toggleMaximize sets maximized to true when open', () => {
+    const { result } = renderHook(() => useBrightMail(), { wrapper });
+
+    act(() => result.current.openCompose());
+    act(() => result.current.toggleMaximize());
+
+    if (result.current.composeModal.status === 'open') {
+      expect(result.current.composeModal.maximized).toBe(true);
+    }
+  });
+
+  it('toggleMaximize toggles maximized back to false', () => {
+    const { result } = renderHook(() => useBrightMail(), { wrapper });
+
+    act(() => result.current.openCompose());
+    act(() => result.current.toggleMaximize());
+    act(() => result.current.toggleMaximize());
+
+    if (result.current.composeModal.status === 'open') {
+      expect(result.current.composeModal.maximized).toBe(false);
+    }
+  });
+
+  it('toggleMaximize is a no-op when modal is closed', () => {
+    const { result } = renderHook(() => useBrightMail(), { wrapper });
+
+    act(() => result.current.toggleMaximize());
     expect(result.current.composeModal).toEqual({ status: 'closed' });
   });
 

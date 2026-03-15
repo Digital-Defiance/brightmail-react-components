@@ -47,6 +47,18 @@ jest.mock('@brightchain/brightchain-lib', () => ({
     {},
     { get: (_t: unknown, p: string | symbol) => String(p) },
   ),
+  MessageEncryptionScheme: {
+    NONE: 'none',
+    SHARED_KEY: 'shared_key',
+    RECIPIENT_KEYS: 'recipient_keys',
+    S_MIME: 's_mime',
+  },
+  MAX_ATTACHMENT_SIZE_BYTES: 25 * 1024 * 1024,
+  formatFileSize: (bytes: number) => `${bytes} B`,
+  validateAttachmentSize: (size: number, max: number) => size <= max,
+  validateTotalAttachmentSize: (sizes: number[], max: number) =>
+    sizes.every((s: number) => s <= max) &&
+    sizes.reduce((a: number, b: number) => a + b, 0) <= max,
 }));
 
 jest.mock('@brightchain/brightmail-lib', () => ({
@@ -64,6 +76,26 @@ jest.mock('@digitaldefiance/express-suite-react-components', () => ({
     changeLanguage: jest.fn(),
     currentLanguage: 'en',
   }),
+}));
+
+// Mock Tiptap to avoid JSDOM issues with the editor
+jest.mock('@tiptap/react', () => ({
+  useEditor: () => null,
+  EditorContent: ({ editor }: any) => (
+    <div data-testid="tiptap-editor-content">editor content</div>
+  ),
+}));
+jest.mock('@tiptap/starter-kit', () => ({
+  __esModule: true,
+  default: { configure: jest.fn() },
+}));
+jest.mock('@tiptap/extension-underline', () => ({
+  __esModule: true,
+  default: {},
+}));
+jest.mock('@tiptap/extension-link', () => ({
+  __esModule: true,
+  default: { configure: jest.fn() },
 }));
 
 const mockSendEmail = jest.fn();
@@ -123,7 +155,7 @@ describe('ComposeView', () => {
    * Requirement 4.1: Form fields present with labels
    * Requirement 12.3: All form fields have visible labels
    */
-  it('renders all form fields with labels', () => {
+  it('renders all form fields with labels', async () => {
     render(<ComposeView />);
 
     expect(screen.getByLabelText('Compose_To')).toBeInTheDocument();
@@ -132,9 +164,12 @@ describe('ComposeView', () => {
     expect(
       screen.getByLabelText('Compose_Subject'),
     ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText('Compose_Body'),
-    ).toBeInTheDocument();
+    // Body is now a RichTextEditor (falls back to TextField in test env after timeout)
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('rich-text-fallback'),
+      ).toBeInTheDocument();
+    });
     expect(screen.getByTestId('send-button')).toBeInTheDocument();
   });
 
@@ -226,7 +261,7 @@ describe('ComposeView', () => {
   /**
    * Requirement 5.4: Reply pre-fill
    */
-  it('pre-fills form for reply with original sender, Re: subject, quoted body', () => {
+  it('pre-fills form for reply with original sender, Re: subject, quoted body', async () => {
     const replyTo = {
       from: {
         localPart: 'alice',
@@ -243,18 +278,22 @@ describe('ComposeView', () => {
 
     const toField = screen.getByLabelText('Compose_To');
     const subjectField = screen.getByLabelText('Compose_Subject');
-    const bodyField = screen.getByLabelText('Compose_Body');
 
     expect(toField).toHaveValue('alice@example.com');
     expect(subjectField).toHaveValue('Re: Hello');
-    const bodyValue = (bodyField as HTMLTextAreaElement).value;
-    expect(bodyValue).toContain('> Original message');
+
+    // Wait for RichTextEditor fallback to render
+    await waitFor(() => {
+      expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
+    });
+    const bodyField = screen.getByTestId('rich-text-fallback').querySelector('textarea')!;
+    expect(bodyField.value).toContain('> Original message');
   });
 
   /**
    * Requirement 5.5: Forward pre-fill
    */
-  it('pre-fills form for forward with Fwd: subject, empty To, quoted body', () => {
+  it('pre-fills form for forward with Fwd: subject, empty To, quoted body', async () => {
     const forwardFrom = {
       subject: 'Hello',
       textBody: 'Original message',
@@ -264,12 +303,16 @@ describe('ComposeView', () => {
 
     const toField = screen.getByLabelText('Compose_To');
     const subjectField = screen.getByLabelText('Compose_Subject');
-    const bodyField = screen.getByLabelText('Compose_Body');
 
     expect(toField).toHaveValue('');
     expect(subjectField).toHaveValue('Fwd: Hello');
-    const bodyValue = (bodyField as HTMLTextAreaElement).value;
-    expect(bodyValue).toContain('> Original message');
+
+    // Wait for RichTextEditor fallback to render
+    await waitFor(() => {
+      expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
+    });
+    const bodyField = screen.getByTestId('rich-text-fallback').querySelector('textarea')!;
+    expect(bodyField.value).toContain('> Original message');
   });
 
   /**

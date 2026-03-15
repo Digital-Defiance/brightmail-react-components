@@ -19,8 +19,10 @@ import {
   IGetUnreadCountResponse,
   IMarkAsReadResponse,
   IQueryInboxResponse,
+  IRecipientVerificationResult,
   IReplyToEmailResponse,
   ISendEmailResponse,
+  MessageEncryptionScheme,
 } from '@brightchain/brightchain-lib';
 import { AxiosInstance, AxiosResponse, isAxiosError } from 'axios';
 
@@ -32,6 +34,12 @@ export interface MailboxInput {
   domain: string;
 }
 
+export interface AttachmentInput {
+  filename: string;
+  mimeType: string;
+  data: string; // base64-encoded file content
+}
+
 export interface SendEmailParams {
   from: MailboxInput;
   to?: MailboxInput[];
@@ -40,6 +48,8 @@ export interface SendEmailParams {
   subject?: string;
   textBody?: string;
   htmlBody?: string;
+  attachments?: AttachmentInput[];
+  encryptionScheme?: MessageEncryptionScheme;
 }
 
 export interface InboxQueryParams {
@@ -182,6 +192,28 @@ export function createEmailApiClient(api: AxiosInstance) {
           `/emails/${encodeURIComponent(messageId)}`,
         ),
       ),
+
+    /**
+     * Verify whether a local username exists on the server.
+     * Returns IRecipientVerificationResult on success, or undefined on failure.
+     * Swallows errors (network, 429) gracefully.
+     *
+     * Requirements: 8.7, 8.8, 8.10
+     */
+    verifyRecipient: async (
+      username: string,
+    ): Promise<IRecipientVerificationResult | undefined> => {
+      try {
+        return await handleApiCall<IRecipientVerificationResult>(() =>
+          api.get<IApiEnvelope<IRecipientVerificationResult>>(
+            `/emails/verify-recipient/${encodeURIComponent(username)}`,
+          ),
+        );
+      } catch {
+        // Swallow errors (network, 429, etc.) — return undefined on failure
+        return undefined;
+      }
+    },
   };
 }
 

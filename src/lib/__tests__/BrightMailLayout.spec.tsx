@@ -60,6 +60,18 @@ jest.mock('@brightchain/brightchain-lib', () => ({
     {},
     { get: (_t: unknown, p: string | symbol) => String(p) },
   ),
+  MessageEncryptionScheme: {
+    NONE: 'none',
+    SHARED_KEY: 'shared_key',
+    RECIPIENT_KEYS: 'recipient_keys',
+    S_MIME: 's_mime',
+  },
+  MAX_ATTACHMENT_SIZE_BYTES: 25 * 1024 * 1024,
+  formatFileSize: (bytes: number) => `${bytes} B`,
+  validateAttachmentSize: (size: number, max: number) => size <= max,
+  validateTotalAttachmentSize: (sizes: number[], max: number) =>
+    sizes.every((s: number) => s <= max) &&
+    sizes.reduce((a: number, b: number) => a + b, 0) <= max,
 }));
 
 jest.mock('@brightchain/brightmail-lib', () => ({
@@ -73,6 +85,23 @@ jest.mock('@brightchain/brightchain-react-components', () => ({
   BrightChainSubLogo: ({ subText }: { subText?: string }) => (
     <span data-testid="brightchain-sub-logo">{subText || 'SubLogo'}</span>
   ),
+}));
+
+jest.mock('@tiptap/react', () => ({
+  useEditor: () => null,
+  EditorContent: () => null,
+}));
+jest.mock('@tiptap/starter-kit', () => ({
+  __esModule: true,
+  default: { configure: jest.fn() },
+}));
+jest.mock('@tiptap/extension-underline', () => ({
+  __esModule: true,
+  default: {},
+}));
+jest.mock('@tiptap/extension-link', () => ({
+  __esModule: true,
+  default: { configure: jest.fn() },
 }));
 
 jest.mock('@digitaldefiance/express-suite-react-components', () => ({
@@ -150,10 +179,10 @@ describe('BrightMailLayout', () => {
     // Sidebar renders the logo
     expect(screen.getByTestId('brightchain-sub-logo')).toBeInTheDocument();
     // Sidebar renders nav items
-    expect(screen.getByText('Inbox')).toBeInTheDocument();
-    expect(screen.getByText('Sent')).toBeInTheDocument();
-    expect(screen.getByText('Drafts')).toBeInTheDocument();
-    expect(screen.getByText('Trash')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Inbox')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Sent')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Drafts')).toBeInTheDocument();
+    expect(screen.getByText('Nav_Trash')).toBeInTheDocument();
   });
 
   /**
@@ -203,6 +232,6 @@ describe('BrightMailLayout', () => {
     render(<BrightMailLayout />);
     // The Compose FAB is rendered by Sidebar which uses useBrightMail()
     // If context wasn't provided, this would throw
-    expect(screen.getByLabelText('Compose')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nav_Compose')).toBeInTheDocument();
   });
 });

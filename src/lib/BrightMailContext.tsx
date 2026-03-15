@@ -34,6 +34,7 @@ export type ComposeModalState =
       status: 'open';
       prefill?: ComposePrefill;
       minimized: boolean;
+      maximized: boolean;
       position: { x: number; y: number };
     };
 
@@ -58,6 +59,7 @@ export interface BrightMailContextValue {
   composeModal: ComposeModalState;
   openCompose: (prefill?: ComposePrefill) => void;
   minimizeCompose: () => void;
+  toggleMaximize: () => void;
   closeCompose: () => void;
   selectedEmailId: string | null;
   setSelectedEmailId: (id: string | null) => void;
@@ -119,6 +121,7 @@ export const BrightMailProvider: FC<BrightMailProviderProps> = ({
       status: 'open',
       prefill,
       minimized: false,
+      maximized: false,
       position: DEFAULT_COMPOSE_POSITION,
     });
   }, []);
@@ -127,6 +130,13 @@ export const BrightMailProvider: FC<BrightMailProviderProps> = ({
     setComposeModal((prev) => {
       if (prev.status !== 'open') return prev;
       return { ...prev, minimized: !prev.minimized };
+    });
+  }, []);
+
+  const toggleMaximize = useCallback(() => {
+    setComposeModal((prev) => {
+      if (prev.status !== 'open') return prev;
+      return { ...prev, maximized: !prev.maximized };
     });
   }, []);
 
@@ -144,6 +154,7 @@ export const BrightMailProvider: FC<BrightMailProviderProps> = ({
       composeModal,
       openCompose,
       minimizeCompose,
+      toggleMaximize,
       closeCompose,
       selectedEmailId,
       setSelectedEmailId,
@@ -154,6 +165,7 @@ export const BrightMailProvider: FC<BrightMailProviderProps> = ({
       composeModal,
       openCompose,
       minimizeCompose,
+      toggleMaximize,
       closeCompose,
       selectedEmailId,
     ],

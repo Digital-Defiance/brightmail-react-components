@@ -13,8 +13,10 @@
  * - Rendered via React Portal at document root
  */
 
+import { MessageEncryptionScheme } from '@brightchain/brightchain-lib';
 import { BrightMailStrings } from '@brightchain/brightmail-lib';
 import { useI18n } from '@digitaldefiance/express-suite-react-components';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloseIcon from '@mui/icons-material/Close';
 import MinimizeIcon from '@mui/icons-material/Minimize';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
@@ -39,18 +41,54 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
+import AttachmentBar, { AttachmentFile } from './AttachmentBar';
 import { useBrightMail, type ComposePrefill } from './BrightMailContext';
+import EncryptionSelector from './EncryptionSelector';
 import RecipientChipInput from './RecipientChipInput';
+import RichTextEditor from './RichTextEditor';
 import { useEmailApi } from './hooks/useEmailApi';
 import {
   isValidEmail,
   mapRecipientsToMailboxes,
+  mapComposeStateToSendParams,
 } from './ComposeView';
+import {
+  extractLocalPart,
+  getEmailDomain,
+  isLocalDomain,
+  verificationResultToChipStatus,
+} from './utils/recipientVerification';
+import type { AttachmentInput } from './services/emailApi';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const MODAL_WIDTH = 480;
 const TITLE_BAR_HEIGHT = 48;
+/** Approximate height of the form fields area (To, Cc, Bcc, Subject). */
+const FORM_FIELDS_HEIGHT = 192;
+/** Approximate height of the action bar (Send button row). */
+const ACTION_BAR_HEIGHT = 52;
+/** Minimum margin from the viewport bottom edge. */
+const BOTTOM_MARGIN = 16;
+
+/**
+ * Compute the maximum height available for the compose body text field.
+ *
+ * Exported for Property 1 testing.
+ */
+export function computeComposeBodyMaxHeight(
+  viewportHeight: number,
+  titleBarHeight = TITLE_BAR_HEIGHT,
+  formFieldsHeight = FORM_FIELDS_HEIGHT,
+  actionBarHeight = ACTION_BAR_HEIGHT,
+  bottomMargin = BOTTOM_MARGIN,
+): number {
+  const maxModalHeight = viewportHeight * 0.7;
+  return Math.max(
+    0,
+    maxModalHeight - titleBarHeight - formFieldsHeight - actionBarHeight - bottomMargin,
+  );
+}
 
 // ─── Exported helpers for property testing ───────────────────────────────────
 
@@ -86,9 +124,11 @@ export function shouldConfirmClose(body: string): boolean {
 export interface ComposeModalProps {
   open: boolean;
   minimized: boolean;
+  maximized: boolean;
   prefill?: ComposePrefill;
   onClose: () => void;
   onMinimize: () => void;
+  onToggleMaximize: () => void;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -96,9 +136,11 @@ export interface ComposeModalProps {
 const ComposeModalInner: FC<ComposeModalProps> = ({
   open,
   minimized,
+  maximized,
   prefill,
   onClose,
   onMinimize,
+  onToggleMaximize,
 }) => {
   const { tBranded: t } = useI18n();
   const emailApi = useEmailApi();
@@ -109,7 +151,12 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
   const [subject, setSubject] = useState(prefill?.subject ?? '');
-  const [body, setBody] = useState(prefill?.body ?? '');
+  const [htmlBody, setHtmlBody] = useState(prefill?.body ?? '');
+  const [textBody, setTextBody] = useState(prefill?.body ?? '');
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
+  const [encryptionScheme, setEncryptionScheme] = useState<MessageEncryptionScheme>(
+    MessageEncryptionScheme.NONE,
+  );
   const [sending, setSending] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -117,6 +164,33 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
+
+  // ── Recipient verification state ────────────────────────────────────
+  const [recipientStatuses, setRecipientStatuses] = useState<
+    Record<string, 'valid' | 'warning' | 'error'>
+  >({});
+  const emailDomain = getEmailDomain();
+
+  const handleChipCommit = useCallback(
+    async (email: string) => {
+      if (!isLocalDomain(email, emailDomain)) return;
+      const localPart = extractLocalPart(email);
+      if (!localPart) return;
+
+      try {
+        const result = await emailApi.verifyRecipient(localPart);
+        if (result) {
+          setRecipientStatuses((prev) => ({
+            ...prev,
+            [email]: verificationResultToChipStatus(result.exists),
+          }));
+        }
+      } catch (err) {
+        console.warn('Recipient verification failed:', err);
+      }
+    },
+    [emailApi, emailDomain],
+  );
 
   // ── Drag state ──────────────────────────────────────────────────────────
   const [position, setPosition] = useState<{ x: number; y: number }>({
@@ -126,6 +200,9 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
   const [dragging, setDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // ── Pre-maximize position (for restore) ─────────────────────────────
+  const preMaximizePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // ── Focus trap refs ─────────────────────────────────────────────────────
   const triggerRef = useRef<Element | null>(null);
@@ -143,7 +220,8 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     if (prefill) {
       setTo(prefill.to ?? []);
       setSubject(prefill.subject ?? '');
-      setBody(prefill.body ?? '');
+      setHtmlBody(prefill.body ?? '');
+      setTextBody(prefill.body ?? '');
     }
   }, [prefill]);
 
@@ -212,19 +290,19 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, minimized, body]);
+  }, [open, minimized, htmlBody]);
 
   // ── Drag handlers ─────────────────────────────────────────────────────
   const handleDragStart = useCallback(
     (e: React.MouseEvent) => {
-      if (isMobile || minimized) return;
+      if (isMobile || minimized || maximized) return;
       setDragging(true);
       dragOffset.current = {
         x: e.clientX - position.x,
         y: e.clientY - position.y,
       };
     },
-    [isMobile, minimized, position],
+    [isMobile, minimized, maximized, position],
   );
 
   useEffect(() => {
@@ -258,12 +336,12 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
 
   // ── Close logic ───────────────────────────────────────────────────────
   const handleCloseAttempt = useCallback(() => {
-    if (shouldConfirmClose(body)) {
+    if (shouldConfirmClose(textBody)) {
       setShowConfirm(true);
     } else {
       onClose();
     }
-  }, [body, onClose]);
+  }, [textBody, onClose]);
 
   const handleConfirmDiscard = useCallback(() => {
     setShowConfirm(false);
@@ -283,6 +361,18 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     onMinimize();
   }, [onMinimize]);
 
+  // ── Maximize / restore toggle ─────────────────────────────────────────
+  const handleToggleMaximize = useCallback(() => {
+    if (!maximized) {
+      // Store current position before maximizing
+      preMaximizePosition.current = { ...position };
+    } else {
+      // Restore to pre-maximize position
+      setPosition(preMaximizePosition.current);
+    }
+    onToggleMaximize();
+  }, [maximized, position, onToggleMaximize]);
+
   // ── Send handler ──────────────────────────────────────────────────────
   const hasValidRecipient = to.some(isValidEmail);
 
@@ -297,14 +387,35 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
 
       const fromMailbox = toMailboxes[0];
 
-      await emailApi.sendEmail({
+      // Convert AttachmentFile[] to AttachmentInput[] (base64)
+      const attachmentInputs: AttachmentInput[] = await Promise.all(
+        attachments.map(async (att) => {
+          const base64 = att.base64Data ?? await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result.split(',')[1] ?? result);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(att.file);
+          });
+          return { filename: att.filename, mimeType: att.mimeType, data: base64 };
+        }),
+      );
+
+      const params = mapComposeStateToSendParams({
         from: fromMailbox,
         to: toMailboxes,
-        cc: ccMailboxes.length > 0 ? ccMailboxes : undefined,
-        bcc: bccMailboxes.length > 0 ? bccMailboxes : undefined,
-        subject: subject || undefined,
-        textBody: body || undefined,
+        cc: ccMailboxes,
+        bcc: bccMailboxes,
+        subject,
+        htmlBody,
+        textBody,
+        attachments: attachmentInputs,
+        encryptionScheme,
       });
+
+      await emailApi.sendEmail(params);
 
       setSnackbar({
         open: true,
@@ -322,7 +433,7 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     } finally {
       setSending(false);
     }
-  }, [hasValidRecipient, to, cc, bcc, subject, body, t, onClose, emailApi]);
+  }, [hasValidRecipient, to, cc, bcc, subject, htmlBody, textBody, attachments, encryptionScheme, t, onClose, emailApi]);
 
   // ── Title text ────────────────────────────────────────────────────────
   const titleText = subject || 'New Message';
@@ -343,10 +454,10 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
         height: TITLE_BAR_HEIGHT,
         bgcolor: 'primary.main',
         color: 'primary.contrastText',
-        cursor: !isMobile && !minimized ? 'grab' : 'default',
+        cursor: !isMobile && !minimized && !maximized ? 'grab' : 'default',
         userSelect: 'none',
-        borderTopLeftRadius: isMobile ? 0 : 8,
-        borderTopRightRadius: isMobile ? 0 : 8,
+        borderTopLeftRadius: isMobile || maximized ? 0 : 8,
+        borderTopRightRadius: isMobile || maximized ? 0 : 8,
       }}
     >
       <Typography
@@ -384,6 +495,24 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
             </IconButton>
           </Tooltip>
         )}
+        {/* Maximize/Restore button — hidden on mobile and when minimized */}
+        {!isMobile && !minimized && (
+          <Tooltip title={maximized ? 'Restore down' : 'Maximize'}>
+            <IconButton
+              data-testid="compose-maximize-btn"
+              size="small"
+              onClick={handleToggleMaximize}
+              sx={{ color: 'inherit' }}
+              aria-label={maximized ? 'Restore compose size' : 'Maximize compose'}
+            >
+              {maximized ? (
+                <CloseFullscreenIcon fontSize="small" />
+              ) : (
+                <OpenInFullIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+        )}
         <Tooltip title="Close">
           <IconButton
             data-testid="compose-close-btn"
@@ -406,11 +535,28 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
 
   // ── Compose form body ─────────────────────────────────────────────────
   const composeBody = (
-    <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'auto', flexGrow: 1 }}>
+    <Box
+      data-testid="compose-body-container"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        flexGrow: 1,
+        minHeight: 0,
+        maxHeight: maximized
+          ? 'none'
+          : `calc(70vh - ${TITLE_BAR_HEIGHT}px - ${BOTTOM_MARGIN}px)`,
+        p: 2,
+        gap: 1.5,
+      }}
+    >
+      {/* Form fields: To, Cc, Bcc, Subject — fixed height region */}
       <RecipientChipInput
         value={to}
         onChange={setTo}
         label={t(BrightMailStrings.Compose_To)}
+        chipStatuses={recipientStatuses}
+        onChipCommit={handleChipCommit}
+        emailDomain={emailDomain}
       />
       <RecipientChipInput
         value={cc}
@@ -432,17 +578,28 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
           'aria-label': t(BrightMailStrings.Compose_Subject),
         }}
       />
-      <TextField
-        data-testid="compose-body-field"
-        label={t(BrightMailStrings.Compose_Body)}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        fullWidth
-        multiline
-        minRows={isMobile ? 8 : 4}
-        inputProps={{
-          'aria-label': t(BrightMailStrings.Compose_Body),
+
+      {/* Body field — flex: 1 with overflow-y: auto so it scrolls within the modal */}
+      <Box
+        data-testid="compose-body-field-wrapper"
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          minHeight: 0,
         }}
+      >
+        <RichTextEditor
+          value={htmlBody}
+          onChange={(html, text) => {
+            setHtmlBody(html);
+            setTextBody(text);
+          }}
+        />
+      </Box>
+
+      <AttachmentBar
+        attachments={attachments}
+        onChange={setAttachments}
       />
 
       {!hasValidRecipient && to.length > 0 && (
@@ -451,7 +608,12 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
         </Typography>
       )}
 
-      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+      {/* Action bar: Send button with encryption selector */}
+      <Box sx={{ display: 'flex', gap: 1, flexShrink: 0, alignItems: 'center' }}>
+        <EncryptionSelector
+          value={encryptionScheme}
+          onChange={setEncryptionScheme}
+        />
         <Button
           variant="contained"
           onClick={handleSend}
@@ -568,7 +730,49 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     );
   }
 
-  // ── Desktop: floating card ────────────────────────────────────────────
+  // ── Desktop: floating card or maximized overlay ─────────────────────
+  if (maximized) {
+    // Maximized mode: centered overlay with backdrop
+    return (
+      <>
+        {/* Semi-transparent backdrop */}
+        <Box
+          data-testid="compose-maximize-backdrop"
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            bgcolor: 'rgba(0,0,0,0.5)',
+            zIndex: 1299,
+          }}
+        />
+        <Card
+          ref={modalRef}
+          data-testid="compose-modal"
+          role="dialog"
+          aria-label={titleText}
+          elevation={16}
+          sx={{
+            position: 'fixed',
+            top: '5vh',
+            left: '5vw',
+            width: '90vw',
+            height: '90vh',
+            zIndex: 1300,
+            display: 'flex',
+            flexDirection: 'column',
+            borderRadius: 2,
+            overflow: 'hidden',
+          }}
+        >
+          {titleBar}
+          {!minimized && composeBody}
+          {confirmDialog}
+        </Card>
+        {snackbarEl}
+      </>
+    );
+  }
+
   // Compute position: default is bottom-right; drag offsets from there
   const cardStyle: React.CSSProperties = {
     position: 'fixed',
@@ -609,19 +813,21 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
 // ─── Portal wrapper that reads from BrightMailContext ────────────────────────
 
 const ComposeModal: FC = () => {
-  const { composeModal, closeCompose, minimizeCompose } = useBrightMail();
+  const { composeModal, closeCompose, minimizeCompose, toggleMaximize } = useBrightMail();
 
   if (composeModal.status === 'closed') return null;
 
-  const { prefill, minimized } = composeModal;
+  const { prefill, minimized, maximized } = composeModal;
 
   const portalContent = (
     <ComposeModalInner
       open={true}
       minimized={minimized}
+      maximized={maximized}
       prefill={prefill}
       onClose={closeCompose}
       onMinimize={minimizeCompose}
+      onToggleMaximize={toggleMaximize}
     />
   );
 

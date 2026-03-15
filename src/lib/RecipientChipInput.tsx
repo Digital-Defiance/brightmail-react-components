@@ -12,6 +12,7 @@
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import React, {
   ClipboardEvent,
   FC,
@@ -28,6 +29,12 @@ export interface RecipientChipInputProps {
   onChange: (emails: string[]) => void;
   label: string;
   error?: boolean;
+  /** Optional map of email → verification status for chip coloring. */
+  chipStatuses?: Record<string, 'valid' | 'warning' | 'error'>;
+  /** Called when a new chip is committed (for triggering verification). */
+  onChipCommit?: (email: string) => void;
+  /** The local email domain (used in warning tooltip text). */
+  emailDomain?: string;
 }
 
 // ─── Email validation ───────────────────────────────────────────────────────
@@ -76,6 +83,9 @@ const RecipientChipInput: FC<RecipientChipInputProps> = ({
   onChange,
   label,
   error,
+  chipStatuses,
+  onChipCommit,
+  emailDomain,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [announcement, setAnnouncement] = useState('');
@@ -90,12 +100,19 @@ const RecipientChipInput: FC<RecipientChipInputProps> = ({
       const newEmails = [...value, ...parts];
       onChange(newEmails);
 
+      // Notify parent of each newly committed email (for verification)
+      if (onChipCommit) {
+        for (const email of parts) {
+          onChipCommit(email);
+        }
+      }
+
       // Build announcement for screen readers
       const added = parts.join(', ');
       setAnnouncement(`Added ${parts.length === 1 ? 'recipient' : 'recipients'}: ${added}`);
       setInputValue('');
     },
-    [value, onChange],
+    [value, onChange, onChipCommit],
   );
 
   /** Handle key presses that commit the current input. */
@@ -164,15 +181,46 @@ const RecipientChipInput: FC<RecipientChipInputProps> = ({
       >
         {value.map((email, index) => {
           const valid = isValidEmail(email);
-          return (
+          const status = chipStatuses?.[email];
+
+          // Determine chip color based on verification status or validity
+          let chipColor: 'default' | 'error' | 'warning' | 'success' = valid
+            ? 'default'
+            : 'error';
+          if (status === 'warning') chipColor = 'warning';
+          else if (status === 'error') chipColor = 'error';
+          else if (status === 'valid') chipColor = 'success';
+          else if (!valid) chipColor = 'error';
+
+          // Build tooltip for warning status
+          const tooltipText =
+            status === 'warning'
+              ? `${email.split('@')[0]} not found at ${emailDomain ?? 'this domain'}`
+              : '';
+
+          const chip = (
             <Chip
               key={`${email}-${index}`}
               label={email}
               onDelete={() => handleDelete(index)}
-              color={valid ? 'default' : 'error'}
+              color={chipColor}
               size="small"
-              data-testid={valid ? 'recipient-chip' : 'recipient-chip-error'}
+              data-testid={
+                !valid
+                  ? 'recipient-chip-error'
+                  : status === 'warning'
+                    ? 'recipient-chip-warning'
+                    : 'recipient-chip'
+              }
             />
+          );
+
+          return tooltipText ? (
+            <Tooltip key={`${email}-${index}`} title={tooltipText}>
+              {chip}
+            </Tooltip>
+          ) : (
+            chip
           );
         })}
       </Box>

@@ -5,24 +5,24 @@
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 5.4, 5.5, 12.3
  */
 
-import { BrightChainComponentId, IMailbox } from '@brightchain/brightchain-lib';
+import { BrightChainComponentId, IMailbox, MessageEncryptionScheme } from '@brightchain/brightchain-lib';
 import { BrightMailStrings } from '@brightchain/brightmail-lib';
 import { useI18n } from '@digitaldefiance/express-suite-react-components';
 import {
   Alert,
   Box,
   Button,
-  List,
-  ListItem,
-  ListItemText,
   Snackbar,
   TextField,
   Typography,
 } from '@mui/material';
 import { FC, memo, useCallback, useEffect, useState } from 'react';
 
+import AttachmentBar, { AttachmentFile } from './AttachmentBar';
+import EncryptionSelector from './EncryptionSelector';
+import RichTextEditor from './RichTextEditor';
 import { useEmailApi } from './hooks/useEmailApi';
-import { MailboxInput } from './services/emailApi';
+import { AttachmentInput, MailboxInput } from './services/emailApi';
 
 // ─── Exported utility functions (tested by property tests) ──────────────────
 
@@ -105,13 +105,57 @@ export function getForwardPrefill(email: {
   return { to: '', subject, body };
 }
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Compose state → SendEmailParams mapping (Property 6) ──────────────────
 
-interface AttachmentMeta {
-  filename: string;
-  mimeType: string;
-  size: number;
+/**
+ * Maps compose form state to a SendEmailParams object.
+ * Exported for property testing (Property 6).
+ */
+export function mapComposeStateToSendParams(state: {
+  from: MailboxInput;
+  to: MailboxInput[];
+  cc?: MailboxInput[];
+  bcc?: MailboxInput[];
+  subject?: string;
+  htmlBody?: string;
+  textBody?: string;
+  attachments?: AttachmentInput[];
+  encryptionScheme?: MessageEncryptionScheme;
+}): import('./services/emailApi').SendEmailParams {
+  return {
+    from: state.from,
+    to: state.to,
+    cc: state.cc && state.cc.length > 0 ? state.cc : undefined,
+    bcc: state.bcc && state.bcc.length > 0 ? state.bcc : undefined,
+    subject: state.subject || undefined,
+    htmlBody: state.htmlBody || undefined,
+    textBody: state.textBody || undefined,
+    attachments:
+      state.attachments && state.attachments.length > 0
+        ? state.attachments
+        : undefined,
+    encryptionScheme: state.encryptionScheme,
+  };
 }
+
+/**
+ * Reads a File as base64-encoded string.
+ */
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Strip the data URL prefix (e.g. "data:application/pdf;base64,")
+      const base64 = result.split(',')[1] ?? result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface ComposeViewProps {
   replyTo?: {
@@ -149,8 +193,12 @@ const ComposeView: FC<ComposeViewProps> = ({
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
   const [subject, setSubject] = useState(prefill?.subject ?? '');
-  const [body, setBody] = useState(prefill?.body ?? '');
-  const [attachments] = useState<AttachmentMeta[]>([]);
+  const [htmlBody, setHtmlBody] = useState(prefill?.body ?? '');
+  const [textBody, setTextBody] = useState(prefill?.body ?? '');
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
+  const [encryptionScheme, setEncryptionScheme] = useState<MessageEncryptionScheme>(
+    MessageEncryptionScheme.NONE,
+  );
   const [sending, setSending] = useState(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -163,7 +211,8 @@ const ComposeView: FC<ComposeViewProps> = ({
     if (prefill) {
       setTo(prefill.to);
       setSubject(prefill.subject);
-      setBody(prefill.body);
+      setHtmlBody(prefill.body);
+      setTextBody(prefill.body);
     }
     // Only run on mount / prop change
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,14 +259,28 @@ const ComposeView: FC<ComposeViewProps> = ({
       // Use the first To address as the from address for now
       const fromMailbox = toMailboxes[0];
 
-      await emailApi.sendEmail({
+      // Convert AttachmentFile[] to AttachmentInput[] (base64)
+      const attachmentInputs: AttachmentInput[] = await Promise.all(
+        attachments.map(async (att) => ({
+          filename: att.filename,
+          mimeType: att.mimeType,
+          data: att.base64Data ?? (await fileToBase64(att.file)),
+        })),
+      );
+
+      const params = mapComposeStateToSendParams({
         from: fromMailbox,
         to: toMailboxes,
-        cc: ccMailboxes.length > 0 ? ccMailboxes : undefined,
-        bcc: bccMailboxes.length > 0 ? bccMailboxes : undefined,
-        subject: subject || undefined,
-        textBody: body || undefined,
+        cc: ccMailboxes,
+        bcc: bccMailboxes,
+        subject,
+        htmlBody,
+        textBody,
+        attachments: attachmentInputs,
+        encryptionScheme,
       });
+
+      await emailApi.sendEmail(params);
 
       setSnackbar({
         open: true,
@@ -238,7 +301,7 @@ const ComposeView: FC<ComposeViewProps> = ({
     } finally {
       setSending(false);
     }
-  }, [hasValidRecipient, toAddresses, cc, bcc, subject, body, t, onClose]);
+  }, [hasValidRecipient, toAddresses, cc, bcc, subject, htmlBody, textBody, attachments, encryptionScheme, t, onClose, emailApi]);
 
   return (
     <Box component="form" noValidate data-testid="compose-form">
@@ -287,37 +350,18 @@ const ComposeView: FC<ComposeViewProps> = ({
           'aria-label': t(BrightMailStrings.Compose_Subject),
         }}
       />
-      <TextField
-        id="compose-body"
-        label={t(BrightMailStrings.Compose_Body)}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        fullWidth
-        margin="normal"
-        multiline
-        minRows={4}
-        inputProps={{
-          'aria-label': t(BrightMailStrings.Compose_Body),
+      <RichTextEditor
+        value={htmlBody}
+        onChange={(html, text) => {
+          setHtmlBody(html);
+          setTextBody(text);
         }}
       />
 
-      {attachments.length > 0 && (
-        <Box mt={1}>
-          <Typography variant="subtitle2">
-            {t(BrightMailStrings.Compose_Attachments)}
-          </Typography>
-          <List dense data-testid="attachment-list">
-            {attachments.map((att, idx) => (
-              <ListItem key={idx} data-testid={`attachment-item-${idx}`}>
-                <ListItemText
-                  primary={att.filename}
-                  secondary={`${att.mimeType} — ${att.size} bytes`}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-      )}
+      <AttachmentBar
+        attachments={attachments}
+        onChange={setAttachments}
+      />
 
       {!hasValidRecipient && to.length > 0 && (
         <Typography
@@ -330,7 +374,11 @@ const ComposeView: FC<ComposeViewProps> = ({
         </Typography>
       )}
 
-      <Box mt={2} display="flex" gap={1}>
+      <Box mt={2} display="flex" gap={1} alignItems="center">
+        <EncryptionSelector
+          value={encryptionScheme}
+          onChange={setEncryptionScheme}
+        />
         <Button
           variant="contained"
           onClick={handleSend}
