@@ -120,6 +120,21 @@ export function shouldConfirmClose(body: string): boolean {
   return body.trim().length > 0;
 }
 
+/**
+ * Returns the list of recipient email addresses that have a 'warning' chip status
+ * (i.e. user not found on the local domain).
+ *
+ * Exported for property testing.
+ */
+export function getWarningRecipients(
+  allRecipients: string[],
+  recipientStatuses: Record<string, 'valid' | 'warning' | 'error'>,
+): string[] {
+  return allRecipients.filter(
+    (email) => recipientStatuses[email] === 'warning',
+  );
+}
+
 // ─── Props ──────────────────────────────────────────────────────────────────
 
 export interface ComposeModalProps {
@@ -160,6 +175,7 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
   );
   const [sending, setSending] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showBounceWarning, setShowBounceWarning] = useState(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -393,7 +409,10 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
   // ── Send handler ──────────────────────────────────────────────────────
   const hasValidRecipient = to.some(isValidEmail);
 
-  const handleSend = useCallback(async () => {
+  const warningRecipients = getWarningRecipients(allRecipients, recipientStatuses);
+
+  /** Actually perform the send (called directly or after bounce warning confirmation). */
+  const executeSend = useCallback(async () => {
     if (!hasValidRecipient) return;
     setSending(true);
 
@@ -451,6 +470,28 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
       setSending(false);
     }
   }, [hasValidRecipient, to, cc, bcc, subject, htmlBody, textBody, attachments, encryptionScheme, t, onClose, emailApi]);
+
+  /** Click handler for the Send button — shows bounce warning if needed. */
+  const handleSend = useCallback(async () => {
+    if (!hasValidRecipient) return;
+
+    if (warningRecipients.length > 0) {
+      setShowBounceWarning(true);
+      return;
+    }
+
+    await executeSend();
+  }, [hasValidRecipient, warningRecipients, executeSend]);
+
+  /** Confirm sending despite bounce warning. */
+  const handleBounceConfirmSend = useCallback(async () => {
+    setShowBounceWarning(false);
+    await executeSend();
+  }, [executeSend]);
+
+  const handleBounceCancelSend = useCallback(() => {
+    setShowBounceWarning(false);
+  }, []);
 
   // ── Title text ────────────────────────────────────────────────────────
   const titleText = subject || 'New Message';
@@ -685,6 +726,50 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     </Box>
   ) : null;
 
+  // ── Bounce warning dialog ─────────────────────────────────────────────
+  const bounceWarningDialog = showBounceWarning ? (
+    <Box
+      data-testid="compose-bounce-warning-dialog"
+      role="alertdialog"
+      aria-label={t(BrightMailStrings.Compose_BounceWarningTitle)}
+      sx={{
+        position: 'absolute',
+        inset: 0,
+        bgcolor: 'rgba(0,0,0,0.4)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+        borderRadius: isMobile ? 0 : 2,
+      }}
+    >
+      <Card sx={{ p: 3, maxWidth: 360 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          {t(BrightMailStrings.Compose_BounceWarningTitle)}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {t(BrightMailStrings.Compose_BounceWarningMessage).replace(
+            '{ADDRESSES}',
+            warningRecipients.join(', '),
+          )}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+          <Button onClick={handleBounceCancelSend}>
+            {t(BrightMailStrings.Action_Cancel)}
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleBounceConfirmSend}
+            data-testid="compose-bounce-send-anyway-btn"
+          >
+            {t(BrightMailStrings.Compose_BounceWarningSendAnyway)}
+          </Button>
+        </Box>
+      </Card>
+    </Box>
+  ) : null;
+
   // ── Snackbar ──────────────────────────────────────────────────────────
   const snackbarEl = (
     <Snackbar
@@ -726,6 +811,7 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
             {titleBar}
             {composeBody}
             {confirmDialog}
+            {bounceWarningDialog}
           </Box>
         </SwipeableDrawer>
         {/* Minimized strip at bottom on mobile */}
@@ -785,6 +871,7 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
           {titleBar}
           {!minimized && composeBody}
           {confirmDialog}
+          {bounceWarningDialog}
         </Card>
         {snackbarEl}
       </>
@@ -822,6 +909,7 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
         {titleBar}
         {!minimized && composeBody}
         {confirmDialog}
+        {bounceWarningDialog}
       </Card>
       {snackbarEl}
     </>
