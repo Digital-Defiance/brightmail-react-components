@@ -21,6 +21,8 @@ export interface EncryptionSelectorProps {
   onChange: (scheme: MessageEncryptionScheme) => void;
   recipientWarnings?: string[];
   senderCertMissing?: boolean;
+  /** Warning message shown when external (non-local) recipients are present and ECIES is selected. */
+  externalRecipientWarning?: string;
 }
 
 // ─── Option mapping ─────────────────────────────────────────────────────────
@@ -59,6 +61,7 @@ const EncryptionSelector: FC<EncryptionSelectorProps> = ({
   onChange,
   recipientWarnings,
   senderCertMissing,
+  externalRecipientWarning,
 }) => {
   const handleChange = useCallback(
     (e: SelectChangeEvent<string>) => {
@@ -115,6 +118,17 @@ const EncryptionSelector: FC<EncryptionSelectorProps> = ({
           data-testid="sender-cert-warning"
         >
           S/MIME signing requires a configured certificate in Settings
+        </Alert>
+      )}
+
+      {externalRecipientWarning && (
+        <Alert
+          severity="error"
+          sx={{ mt: 1 }}
+          data-testid="external-recipient-encryption-warning"
+          role="alert"
+        >
+          {externalRecipientWarning}
         </Alert>
       )}
     </Box>

@@ -23,6 +23,10 @@ import EncryptionSelector from './EncryptionSelector';
 import RichTextEditor from './RichTextEditor';
 import { useEmailApi } from './hooks/useEmailApi';
 import { AttachmentInput, MailboxInput } from './services/emailApi';
+import {
+  getEmailDomain,
+  getExternalRecipients,
+} from './utils/recipientVerification';
 
 // ─── Exported utility functions (tested by property tests) ──────────────────
 
@@ -237,6 +241,25 @@ const ComposeView: FC<ComposeViewProps> = ({
     .filter(Boolean);
   const hasValidRecipient = toAddresses.some(isValidEmail);
 
+  // ── External recipient detection for ECIES warning ──────────────────
+  const emailDomain = getEmailDomain();
+  const ccAddresses = cc.split(',').map((s) => s.trim()).filter(Boolean);
+  const bccAddresses = bcc.split(',').map((s) => s.trim()).filter(Boolean);
+  const allRecipients = [...toAddresses, ...ccAddresses, ...bccAddresses];
+  const externalRecipients = getExternalRecipients(allRecipients, emailDomain);
+  const encryptionRequiresLocalOnly =
+    encryptionScheme === MessageEncryptionScheme.RECIPIENT_KEYS ||
+    encryptionScheme === MessageEncryptionScheme.S_MIME;
+  const hasExternalWithEncryption =
+    encryptionRequiresLocalOnly && externalRecipients.length > 0;
+
+  const externalRecipientWarning = hasExternalWithEncryption
+    ? t(BrightMailStrings.Compose_ExternalRecipientsWarningTemplate).replace(
+        '{ADDRESSES}',
+        externalRecipients.join(', '),
+      )
+    : undefined;
+
   const handleSend = useCallback(async () => {
     if (!hasValidRecipient) return;
     setSending(true);
@@ -378,11 +401,12 @@ const ComposeView: FC<ComposeViewProps> = ({
         <EncryptionSelector
           value={encryptionScheme}
           onChange={setEncryptionScheme}
+          externalRecipientWarning={externalRecipientWarning}
         />
         <Button
           variant="contained"
           onClick={handleSend}
-          disabled={!hasValidRecipient || sending}
+          disabled={!hasValidRecipient || sending || hasExternalWithEncryption}
           data-testid="send-button"
         >
           {t(BrightMailStrings.Compose_Send)}

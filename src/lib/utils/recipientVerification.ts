@@ -57,3 +57,22 @@ export function verificationResultToChipStatus(
 ): 'valid' | 'warning' {
   return exists ? 'valid' : 'warning';
 }
+
+/**
+ * Returns the subset of email addresses that are NOT on the local domain.
+ * Useful for detecting recipients who cannot receive ECIES-encrypted messages.
+ *
+ * @param emails - Array of email address strings
+ * @param emailDomain - The local email domain
+ * @returns Array of email addresses whose domain does not match emailDomain
+ */
+export function getExternalRecipients(
+  emails: string[],
+  emailDomain: string,
+): string[] {
+  return emails.filter((email) => {
+    const trimmed = email.trim();
+    if (trimmed.length === 0) return false;
+    return !isLocalDomain(trimmed, emailDomain);
+  });
+}

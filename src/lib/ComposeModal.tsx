@@ -55,6 +55,7 @@ import {
 import {
   extractLocalPart,
   getEmailDomain,
+  getExternalRecipients,
   isLocalDomain,
   verificationResultToChipStatus,
 } from './utils/recipientVerification';
@@ -170,6 +171,22 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     Record<string, 'valid' | 'warning' | 'error'>
   >({});
   const emailDomain = getEmailDomain();
+
+  // ── External recipient detection for ECIES warning ──────────────────
+  const allRecipients = [...to, ...cc, ...bcc];
+  const externalRecipients = getExternalRecipients(allRecipients, emailDomain);
+  const encryptionRequiresLocalOnly =
+    encryptionScheme === MessageEncryptionScheme.RECIPIENT_KEYS ||
+    encryptionScheme === MessageEncryptionScheme.S_MIME;
+  const hasExternalWithEncryption =
+    encryptionRequiresLocalOnly && externalRecipients.length > 0;
+
+  const externalRecipientWarning = hasExternalWithEncryption
+    ? t(BrightMailStrings.Compose_ExternalRecipientsWarningTemplate).replace(
+        '{ADDRESSES}',
+        externalRecipients.join(', '),
+      )
+    : undefined;
 
   const handleChipCommit = useCallback(
     async (email: string) => {
@@ -613,11 +630,12 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
         <EncryptionSelector
           value={encryptionScheme}
           onChange={setEncryptionScheme}
+          externalRecipientWarning={externalRecipientWarning}
         />
         <Button
           variant="contained"
           onClick={handleSend}
-          disabled={!hasValidRecipient || sending}
+          disabled={!hasValidRecipient || sending || hasExternalWithEncryption}
           data-testid="compose-send-button"
         >
           {t(BrightMailStrings.Compose_Send)}
