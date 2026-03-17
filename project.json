@@ -21,6 +21,10 @@
           }
         ]
       },
+      "configurations": {
+        "development": {},
+        "production": {}
+      }
     },
     "publish": {
       "command": "node tools/scripts/publish.mjs brightmail-react-components {args.ver} {args.tag}",
