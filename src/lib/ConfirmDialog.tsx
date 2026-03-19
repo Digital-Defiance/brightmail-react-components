@@ -1,4 +1,3 @@
-import { BrightChainComponentId } from '@brightchain/brightchain-lib';
 import { BrightMailStrings } from '@brightchain/brightmail-lib';
 import { useI18n } from '@digitaldefiance/express-suite-react-components';
 import {

@@ -70,11 +70,16 @@ export function truncateSnippet(text: string, maxLen = 80): string {
 }
 
 /**
- * Determines whether an email is read based on its readReceipts map.
- * An email is considered read if readReceipts has at least one entry.
+ * Determines whether an email is read based on its readReceipts.
+ * Handles both Map (in-memory/test) and plain object (JSON-deserialized) formats.
  */
 export function isEmailRead(email: IEmailMetadata): boolean {
-  return email.readReceipts != null && email.readReceipts.size > 0;
+  const rr = email.readReceipts;
+  if (rr == null) return false;
+  if (rr instanceof Map) return rr.size > 0;
+  // JSON-deserialized: plain object with string keys
+  if (typeof rr === 'object') return Object.keys(rr).length > 0;
+  return false;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -98,13 +103,10 @@ const EmailRow: FC<EmailRowProps> = ({
   // Labels from the keywords field (if present)
   const labels: string[] = email.keywords ?? [];
 
-  const handleStarClick = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation();
-      setStarred((prev) => !prev);
-    },
-    [],
-  );
+  const handleStarClick = useCallback((e: MouseEvent) => {
+    e.stopPropagation();
+    setStarred((prev) => !prev);
+  }, []);
 
   const handleCheckboxClick = useCallback(
     (e: MouseEvent) => {

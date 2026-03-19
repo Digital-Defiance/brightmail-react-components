@@ -9,6 +9,8 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
  */
 
+import DeleteIcon from '@mui/icons-material/Delete';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -16,9 +18,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import DeleteIcon from '@mui/icons-material/Delete';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import { FC, memo, useCallback, useRef, useState } from 'react';
+import React, { FC, memo, useCallback, useRef, useState } from 'react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -69,9 +69,7 @@ export function isValidGpgPublicKey(content: string): boolean {
  * Extracts basic metadata from a PEM certificate string.
  * Returns a simplified label (just indicates it's present).
  */
-export function extractSmimeMetadata(
-  pem: string,
-): KeyMetadata[] {
+export function extractSmimeMetadata(pem: string): KeyMetadata[] {
   const lines = pem.trim().split('\n');
   // Count content lines (excluding markers)
   const contentLines = lines.filter(
@@ -86,9 +84,7 @@ export function extractSmimeMetadata(
 /**
  * Extracts basic metadata from an ASCII-armored GPG public key.
  */
-export function extractGpgMetadata(
-  armored: string,
-): KeyMetadata[] {
+export function extractGpgMetadata(armored: string): KeyMetadata[] {
   const lines = armored.trim().split('\n');
   const contentLines = lines.filter(
     (l) => !l.startsWith('-----') && l.trim().length > 0,
@@ -195,7 +191,10 @@ const KeyManagementSettings: FC<KeyManagementSettingsProps> = ({
   const gpgMetadata = gpgPublicKey ? extractGpgMetadata(gpgPublicKey) : null;
 
   return (
-    <Box data-testid="key-management-settings" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box
+      data-testid="key-management-settings"
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+    >
       {/* ── S/MIME Certificate Section ─────────────────────────────────── */}
       <Card variant="outlined">
         <CardContent>
@@ -206,7 +205,11 @@ const KeyManagementSettings: FC<KeyManagementSettingsProps> = ({
           {smimeMetadata ? (
             <Box data-testid="smime-metadata" sx={{ mb: 1 }}>
               {smimeMetadata.map((m) => (
-                <Typography key={m.label} variant="body2" color="text.secondary">
+                <Typography
+                  key={m.label}
+                  variant="body2"
+                  color="text.secondary"
+                >
                   {m.label}: {m.value}
                 </Typography>
               ))}
@@ -229,11 +232,7 @@ const KeyManagementSettings: FC<KeyManagementSettingsProps> = ({
           )}
 
           {smimeError && (
-            <Alert
-              severity="error"
-              data-testid="smime-error"
-              sx={{ mb: 1 }}
-            >
+            <Alert severity="error" data-testid="smime-error" sx={{ mb: 1 }}>
               {smimeError}
             </Alert>
           )}
@@ -269,7 +268,11 @@ const KeyManagementSettings: FC<KeyManagementSettingsProps> = ({
           {gpgMetadata ? (
             <Box data-testid="gpg-metadata" sx={{ mb: 1 }}>
               {gpgMetadata.map((m) => (
-                <Typography key={m.label} variant="body2" color="text.secondary">
+                <Typography
+                  key={m.label}
+                  variant="body2"
+                  color="text.secondary"
+                >
                   {m.label}: {m.value}
                 </Typography>
               ))}
@@ -292,11 +295,7 @@ const KeyManagementSettings: FC<KeyManagementSettingsProps> = ({
           )}
 
           {gpgError && (
-            <Alert
-              severity="error"
-              data-testid="gpg-error"
-              sx={{ mb: 1 }}
-            >
+            <Alert severity="error" data-testid="gpg-error" sx={{ mb: 1 }}>
               {gpgError}
             </Alert>
           )}

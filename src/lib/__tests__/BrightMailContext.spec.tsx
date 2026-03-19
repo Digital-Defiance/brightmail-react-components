@@ -2,11 +2,8 @@
  * Unit tests for BrightMailContext, BrightMailProvider, and useBrightMail hook.
  */
 import { act, renderHook } from '@testing-library/react';
-import React, { FC, ReactNode } from 'react';
-import {
-  BrightMailProvider,
-  useBrightMail,
-} from '../BrightMailContext';
+import { FC, ReactNode } from 'react';
+import { BrightMailProvider, useBrightMail } from '../BrightMailContext';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -23,7 +20,9 @@ describe('BrightMailContext', () => {
 
   it('useBrightMail throws when used outside provider', () => {
     // Suppress console.error for the expected error
-    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* noop */
+    });
     expect(() => renderHook(() => useBrightMail())).toThrow(
       'useBrightMail must be used within a BrightMailProvider',
     );
@@ -63,11 +62,15 @@ describe('BrightMailContext', () => {
 
     act(() => result.current.openCompose());
     expect(result.current.composeModal.status).toBe('open');
-    if (result.current.composeModal.status === 'open') {
-      expect(result.current.composeModal.minimized).toBe(false);
-      expect(result.current.composeModal.maximized).toBe(false);
-      expect(result.current.composeModal.prefill).toBeUndefined();
-    }
+    const modal = result.current.composeModal as {
+      status: 'open';
+      minimized: boolean;
+      maximized: boolean;
+      prefill?: unknown;
+    };
+    expect(modal.minimized).toBe(false);
+    expect(modal.maximized).toBe(false);
+    expect(modal.prefill).toBeUndefined();
   });
 
   it('openCompose with prefill stores prefill data', () => {
@@ -79,9 +82,11 @@ describe('BrightMailContext', () => {
     };
 
     act(() => result.current.openCompose(prefill));
-    if (result.current.composeModal.status === 'open') {
-      expect(result.current.composeModal.prefill).toEqual(prefill);
-    }
+    const modal = result.current.composeModal as {
+      status: 'open';
+      prefill?: unknown;
+    };
+    expect(modal.prefill).toEqual(prefill);
   });
 
   it('minimizeCompose sets minimized to true', () => {
@@ -90,9 +95,11 @@ describe('BrightMailContext', () => {
     act(() => result.current.openCompose());
     act(() => result.current.minimizeCompose());
 
-    if (result.current.composeModal.status === 'open') {
-      expect(result.current.composeModal.minimized).toBe(true);
-    }
+    const modal = result.current.composeModal as {
+      status: 'open';
+      minimized: boolean;
+    };
+    expect(modal.minimized).toBe(true);
   });
 
   it('minimizeCompose is a no-op when modal is closed', () => {
@@ -108,9 +115,11 @@ describe('BrightMailContext', () => {
     act(() => result.current.openCompose());
     act(() => result.current.toggleMaximize());
 
-    if (result.current.composeModal.status === 'open') {
-      expect(result.current.composeModal.maximized).toBe(true);
-    }
+    const modal = result.current.composeModal as {
+      status: 'open';
+      maximized: boolean;
+    };
+    expect(modal.maximized).toBe(true);
   });
 
   it('toggleMaximize toggles maximized back to false', () => {
@@ -120,9 +129,11 @@ describe('BrightMailContext', () => {
     act(() => result.current.toggleMaximize());
     act(() => result.current.toggleMaximize());
 
-    if (result.current.composeModal.status === 'open') {
-      expect(result.current.composeModal.maximized).toBe(false);
-    }
+    const modal = result.current.composeModal as {
+      status: 'open';
+      maximized: boolean;
+    };
+    expect(modal.maximized).toBe(false);
   });
 
   it('toggleMaximize is a no-op when modal is closed', () => {

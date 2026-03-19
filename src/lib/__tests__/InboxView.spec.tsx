@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Unit tests for InboxView component.
  *
@@ -15,6 +16,9 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+
+// Import after mocks
+import InboxView from '../InboxView';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -113,9 +117,6 @@ jest.mock('../hooks/useEmailApi', () => ({
     getUnreadCount: mockGetUnreadCount,
   }),
 }));
-
-// Import after mocks
-import InboxView from '../InboxView';
 
 const mockedApi = {
   sendEmail: mockSendEmail,
@@ -336,9 +337,7 @@ describe('InboxView', () => {
 
     expect(screen.getByTestId('bulk-actions')).toBeInTheDocument();
     expect(screen.getByText('Action_Delete')).toBeInTheDocument();
-    expect(
-      screen.getByText('Action_MarkAsRead'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Action_MarkAsRead')).toBeInTheDocument();
   });
 
   /**

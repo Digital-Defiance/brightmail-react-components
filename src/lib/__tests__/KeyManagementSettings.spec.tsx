@@ -9,8 +9,8 @@
 
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import KeyManagementSettings from '../KeyManagementSettings';
 import type { KeyManagementSettingsProps } from '../KeyManagementSettings';
+import KeyManagementSettings from '../KeyManagementSettings';
 
 // ─── Test data ──────────────────────────────────────────────────────────────
 

@@ -11,19 +11,13 @@
  */
 
 import { IEmailMetadata } from '@brightchain/brightchain-lib';
+import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Skeleton from '@mui/material/Skeleton';
-import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
-import {
-  FC,
-  KeyboardEvent,
-  memo,
-  useCallback,
-  useRef,
-} from 'react';
+import { FC, KeyboardEvent, memo, useCallback, useRef } from 'react';
 
 import EmailRow from './EmailRow';
 
@@ -66,9 +60,22 @@ function EmailListSkeleton() {
     <Box data-testid="email-list-skeleton">
       {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
         <ListItem key={i} disablePadding sx={{ py: 0.5, px: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%', py: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              width: '100%',
+              py: 1,
+            }}
+          >
             {/* Checkbox placeholder */}
-            <Skeleton variant="rectangular" width={20} height={20} sx={{ borderRadius: 0.5 }} />
+            <Skeleton
+              variant="rectangular"
+              width={20}
+              height={20}
+              sx={{ borderRadius: 0.5 }}
+            />
             {/* Avatar placeholder */}
             <Skeleton variant="circular" width={36} height={36} />
             {/* Text lines */}
@@ -106,7 +113,9 @@ const EmailList: FC<EmailListProps> = ({
   const getRowElements = useCallback((): HTMLElement[] => {
     if (!listRef.current) return [];
     return Array.from(
-      listRef.current.querySelectorAll<HTMLElement>('[data-testid^="email-row-"]'),
+      listRef.current.querySelectorAll<HTMLElement>(
+        '[data-testid^="email-row-"]',
+      ),
     );
   }, []);
 
@@ -118,21 +127,25 @@ const EmailList: FC<EmailListProps> = ({
 
       const activeEl = document.activeElement as HTMLElement;
       // Find the closest email-row ancestor of the active element
-      const currentRow = activeEl?.closest('[data-testid^="email-row-"]') as HTMLElement | null;
+      const currentRow = activeEl?.closest(
+        '[data-testid^="email-row-"]',
+      ) as HTMLElement | null;
       const currentIndex = currentRow ? rows.indexOf(currentRow) : -1;
 
       switch (e.key) {
         case 'ArrowDown': {
           e.preventDefault();
           const nextIndex = Math.min(currentIndex + 1, rows.length - 1);
-          const nextButton = rows[nextIndex]?.querySelector<HTMLElement>('[role="button"]');
+          const nextButton =
+            rows[nextIndex]?.querySelector<HTMLElement>('[role="button"]');
           if (nextButton) nextButton.focus();
           break;
         }
         case 'ArrowUp': {
           e.preventDefault();
           const prevIndex = Math.max(currentIndex - 1, 0);
-          const prevButton = rows[prevIndex]?.querySelector<HTMLElement>('[role="button"]');
+          const prevButton =
+            rows[prevIndex]?.querySelector<HTMLElement>('[role="button"]');
           if (prevButton) prevButton.focus();
           break;
         }
