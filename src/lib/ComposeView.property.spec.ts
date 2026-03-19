@@ -1,3 +1,4 @@
+/* eslint-disable jest/no-conditional-expect, @typescript-eslint/no-non-null-assertion */
 /**
  * Property test for compose state to SendEmailParams mapping.
  *
@@ -13,6 +14,9 @@
 
 import * as fc from 'fast-check';
 
+import { mapComposeStateToSendParams } from './ComposeView';
+import type { AttachmentInput, MailboxInput } from './services/emailApi';
+
 const MessageEncryptionScheme = {
   NONE: 'none',
   SHARED_KEY: 'shared_key',
@@ -23,9 +27,6 @@ const MessageEncryptionScheme = {
 jest.mock('@brightchain/brightchain-lib', () => ({
   MessageEncryptionScheme,
 }));
-
-import { mapComposeStateToSendParams } from './ComposeView';
-import type { AttachmentInput, MailboxInput } from './services/emailApi';
 
 // ─── Generators ─────────────────────────────────────────────────────────────
 
@@ -86,14 +87,17 @@ describe('Property 6: Compose state faithfully maps to SendEmailParams', () => {
           // Attachments: if non-empty, all should be present with matching fields
           if (attachments.length > 0) {
             expect(result.attachments).toBeDefined();
+
             expect(result.attachments).toHaveLength(attachments.length);
             for (let i = 0; i < attachments.length; i++) {
               expect(result.attachments![i].filename).toBe(
                 attachments[i].filename,
               );
+
               expect(result.attachments![i].mimeType).toBe(
                 attachments[i].mimeType,
               );
+
               expect(result.attachments![i].data).toBe(attachments[i].data);
             }
           } else {

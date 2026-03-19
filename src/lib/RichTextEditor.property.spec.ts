@@ -1,3 +1,4 @@
+/* eslint-disable jest/no-conditional-expect */
 // Feature: brightmail-composer-enhancements, Property 8: HTML sanitization removes unsafe content
 
 /**
@@ -14,7 +15,7 @@
  */
 
 import fc from 'fast-check';
-import { sanitizeHtml, extractPlainText } from './RichTextEditor';
+import { extractPlainText, sanitizeHtml } from './RichTextEditor';
 
 describe('Feature: brightmail-composer-enhancements, Property 8: HTML sanitization removes unsafe content', () => {
   /**
@@ -26,10 +27,12 @@ describe('Feature: brightmail-composer-enhancements, Property 8: HTML sanitizati
   it('removes <script> tags from any input', () => {
     fc.assert(
       fc.property(
-        fc.tuple(fc.string(), fc.string(), fc.string()).map(
-          ([before, payload, after]) =>
-            `${before}<script>${payload}</script>${after}`,
-        ),
+        fc
+          .tuple(fc.string(), fc.string(), fc.string())
+          .map(
+            ([before, payload, after]) =>
+              `${before}<script>${payload}</script>${after}`,
+          ),
         (html) => {
           const result = sanitizeHtml(html);
           expect(result.toLowerCase()).not.toMatch(/<script[\s>]/);
@@ -52,13 +55,12 @@ describe('Feature: brightmail-composer-enhancements, Property 8: HTML sanitizati
 
     fc.assert(
       fc.property(
-        fc.tuple(
-          fc.string(),
-          fc.constantFrom(...eventHandlers),
-          fc.string(),
-        ).map(([content, handler, payload]) =>
-          `<div ${handler}="${payload}">${content}</div>`,
-        ),
+        fc
+          .tuple(fc.string(), fc.constantFrom(...eventHandlers), fc.string())
+          .map(
+            ([content, handler, payload]) =>
+              `<div ${handler}="${payload}">${content}</div>`,
+          ),
         (html) => {
           const result = sanitizeHtml(html);
           // No inline event handler attributes should remain
@@ -78,13 +80,17 @@ describe('Feature: brightmail-composer-enhancements, Property 8: HTML sanitizati
   it('removes javascript: URIs from any input', () => {
     fc.assert(
       fc.property(
-        fc.tuple(fc.string(), fc.string()).map(
-          ([content, payload]) =>
-            `<a href="javascript:${payload}">${content}</a>`,
-        ),
+        fc
+          .tuple(fc.string(), fc.string())
+          .map(
+            ([content, payload]) =>
+              `<a href="javascript:${payload}">${content}</a>`,
+          ),
         (html) => {
           const result = sanitizeHtml(html);
-          expect(result.toLowerCase()).not.toMatch(/href\s*=\s*["']?javascript:/);
+          expect(result.toLowerCase()).not.toMatch(
+            /href\s*=\s*["']?javascript:/,
+          );
         },
       ),
       { numRuns: 100 },
@@ -100,12 +106,14 @@ describe('Feature: brightmail-composer-enhancements, Property 8: HTML sanitizati
   it('removes all unsafe patterns when combined in a single input', () => {
     fc.assert(
       fc.property(
-        fc.tuple(fc.string(), fc.string(), fc.string()).map(
-          ([text, scriptPayload, handlerPayload]) =>
-            `<div onclick="${handlerPayload}">${text}</div>` +
-            `<script>${scriptPayload}</script>` +
-            `<a href="javascript:void(0)">link</a>`,
-        ),
+        fc
+          .tuple(fc.string(), fc.string(), fc.string())
+          .map(
+            ([text, scriptPayload, handlerPayload]) =>
+              `<div onclick="${handlerPayload}">${text}</div>` +
+              `<script>${scriptPayload}</script>` +
+              `<a href="javascript:void(0)">link</a>`,
+          ),
         (html) => {
           const result = sanitizeHtml(html);
           // No script tags
@@ -114,7 +122,9 @@ describe('Feature: brightmail-composer-enhancements, Property 8: HTML sanitizati
           // No event handlers
           expect(result).not.toMatch(/\son\w+\s*=/i);
           // No javascript: URIs
-          expect(result.toLowerCase()).not.toMatch(/href\s*=\s*["']?javascript:/);
+          expect(result.toLowerCase()).not.toMatch(
+            /href\s*=\s*["']?javascript:/,
+          );
         },
       ),
       { numRuns: 100 },
@@ -204,7 +214,10 @@ describe('Feature: brightmail-composer-enhancements, Property 7: HTML to plain-t
       fc.property(
         fc.array(
           fc.tuple(
-            fc.string({ minLength: 1, maxLength: 30 }).map((s) => s.replace(/[<>&]/g, '')).filter((s) => s.length > 0),
+            fc
+              .string({ minLength: 1, maxLength: 30 })
+              .map((s) => s.replace(/[<>&]/g, ''))
+              .filter((s) => s.length > 0),
             tagArb,
           ),
           { minLength: 1, maxLength: 5 },

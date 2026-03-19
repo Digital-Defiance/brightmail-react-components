@@ -9,8 +9,10 @@
  */
 
 import '@testing-library/jest-dom';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import React from 'react';
+import { cleanup, render, screen } from '@testing-library/react';
+
+// Import after mocks
+import BrightMailLayout from '../BrightMailLayout';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -113,9 +115,6 @@ jest.mock('@digitaldefiance/express-suite-react-components', () => ({
     currentLanguage: 'en',
   }),
 }));
-
-// Import after mocks
-import BrightMailLayout from '../BrightMailLayout';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /**
  * Unit tests for ComposeView component.
  *
@@ -16,6 +17,9 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+
+// Import after mocks
+import ComposeView from '../ComposeView';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -127,9 +131,6 @@ jest.mock('../hooks/useEmailApi', () => ({
   }),
 }));
 
-// Import after mocks
-import ComposeView from '../ComposeView';
-
 const mockedApi = {
   sendEmail: mockSendEmail,
   queryInbox: mockQueryInbox,
@@ -161,14 +162,10 @@ describe('ComposeView', () => {
     expect(screen.getByLabelText('Compose_To')).toBeInTheDocument();
     expect(screen.getByLabelText('Compose_Cc')).toBeInTheDocument();
     expect(screen.getByLabelText('Compose_Bcc')).toBeInTheDocument();
-    expect(
-      screen.getByLabelText('Compose_Subject'),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Compose_Subject')).toBeInTheDocument();
     // Body is now a RichTextEditor (falls back to TextField in test env after timeout)
     await waitFor(() => {
-      expect(
-        screen.getByTestId('rich-text-fallback'),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
     });
     expect(screen.getByTestId('send-button')).toBeInTheDocument();
   });
@@ -214,9 +211,7 @@ describe('ComposeView', () => {
 
     // Success snackbar should appear
     await waitFor(() => {
-      expect(
-        screen.getByText('Compose_SendSuccess'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Compose_SendSuccess')).toBeInTheDocument();
     });
 
     // onClose called after timeout
@@ -248,9 +243,7 @@ describe('ComposeView', () => {
 
     // Error snackbar should appear
     await waitFor(() => {
-      expect(
-        screen.getByText('Compose_SendError'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Compose_SendError')).toBeInTheDocument();
     });
 
     // Form data retained
@@ -286,7 +279,9 @@ describe('ComposeView', () => {
     await waitFor(() => {
       expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
     });
-    const bodyField = screen.getByTestId('rich-text-fallback').querySelector('textarea')!;
+    const bodyField = screen
+      .getByTestId('rich-text-fallback')
+      .querySelector('textarea')!;
     expect(bodyField.value).toContain('> Original message');
   });
 
@@ -311,7 +306,9 @@ describe('ComposeView', () => {
     await waitFor(() => {
       expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
     });
-    const bodyField = screen.getByTestId('rich-text-fallback').querySelector('textarea')!;
+    const bodyField = screen
+      .getByTestId('rich-text-fallback')
+      .querySelector('textarea')!;
     expect(bodyField.value).toContain('> Original message');
   });
 
@@ -324,9 +321,7 @@ describe('ComposeView', () => {
     const toField = screen.getByLabelText('Compose_To');
     fireEvent.change(toField, { target: { value: 'not-an-email' } });
 
-    expect(
-      screen.getByText('Compose_InvalidRecipient'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Compose_InvalidRecipient')).toBeInTheDocument();
   });
 
   /**

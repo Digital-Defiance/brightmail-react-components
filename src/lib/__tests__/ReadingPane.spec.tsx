@@ -11,6 +11,9 @@
 import '@testing-library/jest-dom';
 import { act, render, screen, waitFor } from '@testing-library/react';
 
+// Import after mocks
+import ReadingPane from '../ReadingPane';
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 jest.mock('@digitaldefiance/ecies-lib', () => ({
@@ -90,9 +93,6 @@ jest.mock('../BrightMailContext', () => ({
     setSelectedEmailId: jest.fn(),
   }),
 }));
-
-// Import after mocks
-import ReadingPane from '../ReadingPane';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

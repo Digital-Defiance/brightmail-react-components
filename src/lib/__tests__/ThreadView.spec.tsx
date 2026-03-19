@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /**
  * Unit tests for ThreadView component.
  *
@@ -17,6 +18,9 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+
+// Import after mocks
+import ThreadView from '../ThreadView';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -120,9 +124,6 @@ jest.mock('../BrightMailContext', () => ({
     setSelectedEmailId: jest.fn(),
   }),
 }));
-
-// Import after mocks
-import ThreadView from '../ThreadView';
 
 const mockedApi = {
   sendEmail: mockSendEmail,

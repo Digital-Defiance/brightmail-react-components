@@ -41,10 +41,9 @@ describe('Feature: brightmail-composer-enhancements, Property 5: Attachment remo
     fc.assert(
       fc.property(
         fc
-          .array(
-            fc.record({ filename: fc.string(), sizeBytes: fc.nat() }),
-            { minLength: 1 },
-          )
+          .array(fc.record({ filename: fc.string(), sizeBytes: fc.nat() }), {
+            minLength: 1,
+          })
           .chain((attachments) =>
             fc.tuple(
               fc.constant(attachments),

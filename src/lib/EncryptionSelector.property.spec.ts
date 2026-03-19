@@ -1,3 +1,4 @@
+/* eslint-disable jest/expect-expect */
 // Feature: brightmail-composer-enhancements, Property 9: Missing recipient keys detection
 /**
  * Property-based tests for findMissingRecipientKeys.
@@ -13,6 +14,9 @@
 // Mock brightchain-lib to avoid deep initialization chain (ECIES service)
 // that fails in the jsdom test environment. Only MessageEncryptionScheme
 // is needed by EncryptionSelector.
+import fc from 'fast-check';
+import { findMissingRecipientKeys } from './EncryptionSelector';
+
 jest.mock('@brightchain/brightchain-lib', () => ({
   MessageEncryptionScheme: {
     NONE: 'none',
@@ -21,9 +25,6 @@ jest.mock('@brightchain/brightchain-lib', () => ({
     S_MIME: 's_mime',
   },
 }));
-
-import fc from 'fast-check';
-import { findMissingRecipientKeys } from './EncryptionSelector';
 
 describe('Feature: brightmail-composer-enhancements, Property 9: Missing recipient keys detection', () => {
   /**
@@ -37,9 +38,7 @@ describe('Feature: brightmail-composer-enhancements, Property 9: Missing recipie
         fc.dictionary(fc.emailAddress(), fc.string()),
         (recipients: string[], knownKeys: Record<string, string>) => {
           const result = findMissingRecipientKeys(recipients, knownKeys);
-          const expected = recipients.filter(
-            (addr) => !(addr in knownKeys),
-          );
+          const expected = recipients.filter((addr) => !(addr in knownKeys));
 
           // Same length
           if (result.length !== expected.length) return false;

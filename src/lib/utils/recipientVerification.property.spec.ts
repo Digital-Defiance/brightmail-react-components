@@ -1,3 +1,4 @@
+/* eslint-disable jest/no-conditional-expect */
 /**
  * @fileoverview Property-based tests for recipient verification utilities.
  *
@@ -47,9 +48,7 @@ describe('Property 11: Local recipient verification correctly partitions local v
         fc.stringMatching(/^[a-z]{1,10}\.[a-z]{2,4}$/),
         (localPart, emailDomain, configDomain) => {
           // Only test when domains actually differ
-          fc.pre(
-            emailDomain.toLowerCase() !== configDomain.toLowerCase(),
-          );
+          fc.pre(emailDomain.toLowerCase() !== configDomain.toLowerCase());
           const email = `${localPart}@${emailDomain}`;
           expect(isLocalDomain(email, configDomain)).toBe(false);
         },

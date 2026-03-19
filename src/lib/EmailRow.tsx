@@ -98,13 +98,10 @@ const EmailRow: FC<EmailRowProps> = ({
   // Labels from the keywords field (if present)
   const labels: string[] = email.keywords ?? [];
 
-  const handleStarClick = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation();
-      setStarred((prev) => !prev);
-    },
-    [],
-  );
+  const handleStarClick = useCallback((e: MouseEvent) => {
+    e.stopPropagation();
+    setStarred((prev) => !prev);
+  }, []);
 
   const handleCheckboxClick = useCallback(
     (e: MouseEvent) => {

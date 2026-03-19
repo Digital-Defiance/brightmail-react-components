@@ -6,10 +6,7 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 7.3, 8.6
  */
 
-import {
-  IEmailMetadata,
-  IMailbox,
-} from '@brightchain/brightchain-lib';
+import { IEmailMetadata, IMailbox } from '@brightchain/brightchain-lib';
 import { BrightMailStrings } from '@brightchain/brightmail-lib';
 import { useI18n } from '@digitaldefiance/express-suite-react-components';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -79,7 +76,7 @@ export function getInitialExpandedSet(
  * Returns a one-line snippet from the email body, truncated to maxLen chars.
  */
 function getSnippet(email: IEmailMetadata, maxLen = 80): string {
-  const body = (email as any).textBody ?? '';
+  const body = (email as unknown as { textBody?: string }).textBody ?? '';
   const oneLine = body.replace(/[\r\n]+/g, ' ').trim();
   if (oneLine.length <= maxLen) return oneLine;
   return oneLine.slice(0, maxLen) + '…';
@@ -132,7 +129,7 @@ const ThreadView: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [messageId]);
+  }, [messageId, emailApi]);
 
   useEffect(() => {
     fetchThread();
@@ -174,7 +171,7 @@ const ThreadView: FC = () => {
     } finally {
       setDeleteTarget(null);
     }
-  }, [deleteTarget, t]);
+  }, [deleteTarget, t, emailApi]);
 
   // ─── Reply / Forward via context ────────────────────────────────────
   const handleReply = useCallback(
@@ -188,8 +185,8 @@ const ThreadView: FC = () => {
       const subject = originalSubject.startsWith('Re: ')
         ? originalSubject
         : `Re: ${originalSubject}`;
-      const body = (email as any).textBody
-        ? `\n\n> ${(email as any).textBody}`
+      const body = (email as unknown as { textBody?: string }).textBody
+        ? `\n\n> ${(email as unknown as { textBody?: string }).textBody}`
         : '';
       openCompose({
         mode: 'reply',
@@ -208,8 +205,8 @@ const ThreadView: FC = () => {
       const subject = originalSubject.startsWith('Fwd: ')
         ? originalSubject
         : `Fwd: ${originalSubject}`;
-      const body = (email as any).textBody
-        ? `\n\n> ${(email as any).textBody}`
+      const body = (email as unknown as { textBody?: string }).textBody
+        ? `\n\n> ${(email as unknown as { textBody?: string }).textBody}`
         : '';
       openCompose({
         mode: 'forward',
@@ -254,7 +251,7 @@ const ThreadView: FC = () => {
         severity: 'error',
       });
     }
-  }, [replyText, emails, t, fetchThread]);
+  }, [replyText, emails, t, fetchThread, emailApi]);
 
   // ─── Render helpers ─────────────────────────────────────────────────
   const formatRecipients = (mailboxes: IMailbox[] | undefined): string => {
@@ -357,13 +354,30 @@ const ThreadView: FC = () => {
               data-testid={`thread-header-${email.messageId}`}
               disabled={isLastMessage}
             >
-              <AvatarCircle displayName={getMailboxDisplay(email.from)} size={36} />
+              <AvatarCircle
+                displayName={getMailboxDisplay(email.from)}
+                size={36}
+              />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle2" noWrap data-testid="message-from">
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    noWrap
+                    data-testid="message-from"
+                  >
                     {getMailboxDisplay(email.from)}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" data-testid="message-date">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    data-testid="message-date"
+                  >
                     {formatDateTimeLocale(email.date)}
                   </Typography>
                 </Box>
@@ -381,11 +395,7 @@ const ThreadView: FC = () => {
             </ButtonBase>
 
             {/* Expanded content with smooth transition */}
-            <Collapse
-              in={isExpanded}
-              timeout={200}
-              easing="ease"
-            >
+            <Collapse in={isExpanded} timeout={200} easing="ease">
               <Box sx={{ px: 2, pb: 2 }}>
                 <Typography
                   variant="body2"
@@ -420,7 +430,7 @@ const ThreadView: FC = () => {
                   sx={{ whiteSpace: 'pre-wrap' }}
                   data-testid="message-body"
                 >
-                  {(email as any).textBody ?? ''}
+                  {(email as unknown as { textBody?: string }).textBody ?? ''}
                 </Typography>
 
                 {/* Action toolbar */}
