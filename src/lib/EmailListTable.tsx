@@ -38,10 +38,11 @@ function getSenderDisplay(email: IEmailMetadata): string {
 }
 
 function isRead(email: IEmailMetadata): boolean {
-  // readReceipts is a Map; if it has any entries the email has been read
-  if (email.readReceipts && email.readReceipts.size > 0) {
-    return true;
-  }
+  // readReceipts may be a Map (in-memory/test) or plain object (JSON-deserialized)
+  const rr = email.readReceipts;
+  if (rr == null) return false;
+  if (rr instanceof Map) return rr.size > 0;
+  if (typeof rr === 'object') return Object.keys(rr).length > 0;
   return false;
 }
 

@@ -5,7 +5,10 @@
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 5.4, 5.5, 12.3
  */
 
-import { BrightChainComponentId, IMailbox, MessageEncryptionScheme } from '@brightchain/brightchain-lib';
+import {
+  IMailbox,
+  MessageEncryptionScheme,
+} from '@brightchain/brightchain-lib';
 import { BrightMailStrings } from '@brightchain/brightmail-lib';
 import { useI18n } from '@digitaldefiance/express-suite-react-components';
 import {
@@ -77,7 +80,7 @@ export function mapRecipientsToMailboxes(addresses: string[]): MailboxInput[] {
  * Generates reply pre-fill data from an original email.
  */
 export function getReplyPrefill(email: {
-  from: any;
+  from: { address?: string; localPart?: string; domain?: string };
   subject?: string;
   textBody?: string;
 }): { to: string; subject: string; body: string } {
@@ -200,9 +203,8 @@ const ComposeView: FC<ComposeViewProps> = ({
   const [htmlBody, setHtmlBody] = useState(prefill?.body ?? '');
   const [textBody, setTextBody] = useState(prefill?.body ?? '');
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
-  const [encryptionScheme, setEncryptionScheme] = useState<MessageEncryptionScheme>(
-    MessageEncryptionScheme.NONE,
-  );
+  const [encryptionScheme, setEncryptionScheme] =
+    useState<MessageEncryptionScheme>(MessageEncryptionScheme.NONE);
   const [sending, setSending] = useState(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -243,8 +245,14 @@ const ComposeView: FC<ComposeViewProps> = ({
 
   // ── External recipient detection for ECIES warning ──────────────────
   const emailDomain = getEmailDomain();
-  const ccAddresses = cc.split(',').map((s) => s.trim()).filter(Boolean);
-  const bccAddresses = bcc.split(',').map((s) => s.trim()).filter(Boolean);
+  const ccAddresses = cc
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const bccAddresses = bcc
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const allRecipients = [...toAddresses, ...ccAddresses, ...bccAddresses];
   const externalRecipients = getExternalRecipients(allRecipients, emailDomain);
   const encryptionRequiresLocalOnly =
@@ -324,7 +332,20 @@ const ComposeView: FC<ComposeViewProps> = ({
     } finally {
       setSending(false);
     }
-  }, [hasValidRecipient, toAddresses, cc, bcc, subject, htmlBody, textBody, attachments, encryptionScheme, t, onClose, emailApi]);
+  }, [
+    hasValidRecipient,
+    toAddresses,
+    cc,
+    bcc,
+    subject,
+    htmlBody,
+    textBody,
+    attachments,
+    encryptionScheme,
+    t,
+    onClose,
+    emailApi,
+  ]);
 
   return (
     <Box component="form" noValidate data-testid="compose-form">
@@ -381,10 +402,7 @@ const ComposeView: FC<ComposeViewProps> = ({
         }}
       />
 
-      <AttachmentBar
-        attachments={attachments}
-        onChange={setAttachments}
-      />
+      <AttachmentBar attachments={attachments} onChange={setAttachments} />
 
       {!hasValidRecipient && to.length > 0 && (
         <Typography

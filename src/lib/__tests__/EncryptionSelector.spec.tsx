@@ -10,6 +10,10 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
+// Import after mocks
+import type { EncryptionSelectorProps } from '../EncryptionSelector';
+import EncryptionSelector from '../EncryptionSelector';
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const MessageEncryptionScheme = {
@@ -22,10 +26,6 @@ const MessageEncryptionScheme = {
 jest.mock('@brightchain/brightchain-lib', () => ({
   MessageEncryptionScheme,
 }));
-
-// Import after mocks
-import EncryptionSelector from '../EncryptionSelector';
-import type { EncryptionSelectorProps } from '../EncryptionSelector';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -140,8 +140,6 @@ describe('EncryptionSelector', () => {
       senderCertMissing: true,
     });
 
-    expect(
-      screen.queryByTestId('sender-cert-warning'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sender-cert-warning')).not.toBeInTheDocument();
   });
 });

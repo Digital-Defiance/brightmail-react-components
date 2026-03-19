@@ -10,8 +10,8 @@
  * Validates: Requirements 8.2, 8.3, 8.10
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
 import RecipientChipInput from '../RecipientChipInput';
 
 // Mock i18n — RecipientChipInput doesn't use i18n directly, but just in case
@@ -85,10 +85,7 @@ describe('RecipientChipInput verification display', () => {
   it('should call onChipCommit when a new chip is committed via Enter', () => {
     const onChipCommit = jest.fn();
     render(
-      <RecipientChipInput
-        {...defaultProps}
-        onChipCommit={onChipCommit}
-      />,
+      <RecipientChipInput {...defaultProps} onChipCommit={onChipCommit} />,
     );
 
     const input = screen.getByLabelText('To');

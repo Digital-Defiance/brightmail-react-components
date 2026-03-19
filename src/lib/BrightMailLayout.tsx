@@ -1,49 +1,95 @@
 /**
  * BrightMailLayout — Three-panel shell for BrightMail.
  *
- * Wraps all BrightMail routes with BrightMailProvider context, renders:
- * - Sidebar (permanent on >960px, temporary drawer on ≤960px)
- * - Center content area via <Outlet />
- * - Optional ReadingPane on the right at ≥1280px (~40% width)
- * - ComposeModal via React Portal (placeholder until Task 7)
- * - Hamburger IconButton for toggling sidebar on narrow viewports
+ * Migrated to use the shared LayoutShell from brightchain-react-components.
+ * Wraps all BrightMail routes with BrightMailProvider context.
  *
  * Requirements: 1.1, 1.2, 1.5, 1.6, 1.8
  */
-import MenuIcon from '@mui/icons-material/Menu';
+import { faEnvelope } from '@awesome.me/kit-a20d532681/icons/classic/solid';
+import { THEME_COLORS } from '@brightchain/brightchain-lib';
+import {
+  BrightChainSubLogo,
+  LayoutShell,
+  SubLogoHeight,
+  SubLogoIconHeight,
+  type NavItem,
+  type SidebarConfig,
+} from '@brightchain/brightchain-react-components';
+import { BrightMailStrings } from '@brightchain/brightmail-lib';
+import { useI18n } from '@digitaldefiance/express-suite-react-components';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DraftsIcon from '@mui/icons-material/Drafts';
+import EditIcon from '@mui/icons-material/Edit';
+import InboxIcon from '@mui/icons-material/Inbox';
+import LabelIcon from '@mui/icons-material/Label';
+import SendIcon from '@mui/icons-material/Send';
+import { useTheme } from '@mui/material';
 import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
-import { FC, memo, useCallback } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import Fab from '@mui/material/Fab';
+import { FC, memo, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './BrightMail.scss';
 import { BrightMailProvider, useBrightMail } from './BrightMailContext';
 import ComposeModal from './ComposeModal';
 import ReadingPane from './ReadingPane';
-import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
-import './BrightMail.scss';
 
 // ─── Inner layout (must be inside BrightMailProvider) ───────────────────────
 
 const BrightMailLayoutInner: FC = () => {
-  const theme = useTheme();
-  const {
-    sidebarOpen,
-    setSidebarOpen,
-    selectedEmailId,
-  } = useBrightMail();
-  const location = useLocation();
+  const contrastText = useTheme().palette.primary.contrastText;
+  const { openCompose, selectedEmailId } = useBrightMail();
+  const { tBranded: t } = useI18n();
   const navigate = useNavigate();
 
-  // Breakpoints
-  const isDesktop = useMediaQuery('(min-width:961px)');
-  const isWideDesktop = useMediaQuery('(min-width:1280px)');
+  const brandConfig = useMemo(
+    () => ({
+      appName: 'BrightMail',
+      logo: (
+        <BrightChainSubLogo
+          subText="Mail"
+          icon={faEnvelope}
+          iconColor={contrastText}
+          height={SubLogoHeight}
+          iconHeight={SubLogoIconHeight}
+          leadColor={contrastText}
+        />
+      ),
+      primaryColor: THEME_COLORS.CHAIN_BLUE,
+    }),
+    [contrastText],
+  );
 
-  const sidebarVariant = isDesktop ? 'permanent' : 'temporary';
-
-  const handleSidebarToggle = useCallback(() => {
-    setSidebarOpen(!sidebarOpen);
-  }, [sidebarOpen, setSidebarOpen]);
+  const navItems: NavItem[] = useMemo(
+    () => [
+      {
+        route: '/brightmail',
+        label: t(BrightMailStrings.Nav_Inbox),
+        icon: <InboxIcon />,
+      },
+      {
+        route: '/brightmail/sent',
+        label: t(BrightMailStrings.Nav_Sent),
+        icon: <SendIcon />,
+      },
+      {
+        route: '/brightmail/drafts',
+        label: t(BrightMailStrings.Nav_Drafts),
+        icon: <DraftsIcon />,
+      },
+      {
+        route: '/brightmail/trash',
+        label: t(BrightMailStrings.Nav_Trash),
+        icon: <DeleteIcon />,
+      },
+      {
+        route: '/brightmail/labels',
+        label: t(BrightMailStrings.Nav_Labels),
+        icon: <LabelIcon />,
+      },
+    ],
+    [t],
+  );
 
   const handleNavigate = useCallback(
     (route: string) => {
@@ -52,91 +98,56 @@ const BrightMailLayoutInner: FC = () => {
     [navigate],
   );
 
-  return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
-      {/* Sidebar */}
-      <Sidebar
-        open={isDesktop ? true : sidebarOpen}
-        onToggle={handleSidebarToggle}
-        variant={sidebarVariant}
-        activeRoute={location.pathname}
-        onNavigate={handleNavigate}
-      />
-
-      {/* Main content area */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          ml: isDesktop ? 0 : 0,
-        }}
-      >
-        {/* Top bar with hamburger on narrow viewports */}
-        {!isDesktop && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              px: 1,
-              py: 0.5,
-              borderBottom: 1,
-              borderColor: 'divider',
-            }}
+  const sidebarHeader = useMemo(
+    () => (
+      <Box sx={{ px: 2, pt: 2, pb: 1 }}>
+        <BrightChainSubLogo
+          subText="Mail"
+          icon={faEnvelope}
+          height={30}
+          iconHeight={20}
+        />
+        <Box sx={{ mt: 2 }}>
+          <Fab
+            color="primary"
+            variant="extended"
+            onClick={() => openCompose()}
+            aria-label={t(BrightMailStrings.Nav_Compose)}
+            sx={{ width: '100%', textTransform: 'none' }}
           >
-            <IconButton
-              aria-label="Toggle sidebar"
-              onClick={handleSidebarToggle}
-              edge="start"
-              sx={{ mr: 1 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          </Box>
-        )}
-
-        {/* Content row: center + optional reading pane */}
-        <Box
-          sx={{
-            display: 'flex',
-            flexGrow: 1,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Center content — Outlet fills remaining space */}
-          <Box
-            sx={{
-              flexGrow: 1,
-              flexBasis: 0,
-              overflow: 'auto',
-              p: 2,
-            }}
-          >
-            <Outlet />
-          </Box>
-
-          {/* ReadingPane — only on wide desktops (≥1280px) */}
-          {isWideDesktop && (
-            <Box
-              sx={{
-                width: '40%',
-                flexShrink: 0,
-                borderLeft: 1,
-                borderColor: 'divider',
-                overflow: 'auto',
-              }}
-            >
-              <ReadingPane emailId={selectedEmailId} />
-            </Box>
-          )}
+            <EditIcon sx={{ mr: 1 }} />
+            {t(BrightMailStrings.Nav_Compose)}
+          </Fab>
         </Box>
       </Box>
+    ),
+    [openCompose, t],
+  );
 
-      {/* ComposeModal — rendered via React Portal */}
+  const sidebarConfig: SidebarConfig = useMemo(
+    () => ({
+      items: navItems,
+      header: sidebarHeader,
+      ariaLabel: t(BrightMailStrings.Nav_MailFolders),
+      onNavigate: handleNavigate,
+    }),
+    [navItems, sidebarHeader, handleNavigate, t],
+  );
+
+  const detailPanel = useMemo(
+    () => <ReadingPane emailId={selectedEmailId} />,
+    [selectedEmailId],
+  );
+
+  return (
+    <>
+      <LayoutShell
+        brandConfig={brandConfig}
+        sidebar={sidebarConfig}
+        detailPanel={detailPanel}
+      />
       <ComposeModal />
-    </Box>
+    </>
   );
 };
 

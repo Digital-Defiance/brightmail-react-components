@@ -10,6 +10,9 @@
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 
+// Import after mocks
+import RichTextEditor, { type RichTextEditorProps } from '../RichTextEditor';
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 // Controlled mock editor object — tests can override via `mockEditorInstance`
@@ -44,9 +47,11 @@ beforeEach(() => {
 
 jest.mock('@tiptap/react', () => ({
   useEditor: jest.fn(() => mockEditorInstance),
-  EditorContent: jest.fn(({ 'data-testid': testId }: { 'data-testid'?: string }) => (
-    <div data-testid={testId ?? 'editor-content'}>Editor content area</div>
-  )),
+  EditorContent: jest.fn(
+    ({ 'data-testid': testId }: { 'data-testid'?: string }) => (
+      <div data-testid={testId ?? 'editor-content'}>Editor content area</div>
+    ),
+  ),
 }));
 
 jest.mock('@tiptap/starter-kit', () => ({
@@ -63,9 +68,6 @@ jest.mock('@tiptap/extension-link', () => ({
   __esModule: true,
   default: { configure: jest.fn(() => ({})) },
 }));
-
-// Import after mocks
-import RichTextEditor, { type RichTextEditorProps } from '../RichTextEditor';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -174,7 +176,9 @@ describe('RichTextEditor', () => {
       fireEvent.click(boldBtn);
 
       // The mock editor's chain() should have been called
-      expect(mockEditorInstance!['chain']).toHaveBeenCalled();
+      expect(
+        (mockEditorInstance as Record<string, unknown>)['chain'],
+      ).toHaveBeenCalled();
     });
 
     it('formatting toolbar has role="toolbar" for assistive technology', () => {
@@ -223,7 +227,9 @@ describe('RichTextEditor', () => {
 
       // The fallback should be present, toolbar should not
       expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
-      expect(container.querySelector('[data-testid="formatting-toolbar"]')).not.toBeInTheDocument();
+      expect(
+        container.querySelector('[data-testid="formatting-toolbar"]'),
+      ).not.toBeInTheDocument();
 
       unmount();
       jest.useRealTimers();

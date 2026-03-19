@@ -16,8 +16,8 @@
 import { MessageEncryptionScheme } from '@brightchain/brightchain-lib';
 import { BrightMailStrings } from '@brightchain/brightmail-lib';
 import { useI18n } from '@digitaldefiance/express-suite-react-components';
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloseIcon from '@mui/icons-material/Close';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import MinimizeIcon from '@mui/icons-material/Minimize';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import Alert from '@mui/material/Alert';
@@ -31,7 +31,7 @@ import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import {
+import React, {
   FC,
   memo,
   useCallback,
@@ -43,15 +43,16 @@ import { createPortal } from 'react-dom';
 
 import AttachmentBar, { AttachmentFile } from './AttachmentBar';
 import { useBrightMail, type ComposePrefill } from './BrightMailContext';
+import {
+  isValidEmail,
+  mapComposeStateToSendParams,
+  mapRecipientsToMailboxes,
+} from './ComposeView';
 import EncryptionSelector from './EncryptionSelector';
 import RecipientChipInput from './RecipientChipInput';
 import RichTextEditor from './RichTextEditor';
 import { useEmailApi } from './hooks/useEmailApi';
-import {
-  isValidEmail,
-  mapRecipientsToMailboxes,
-  mapComposeStateToSendParams,
-} from './ComposeView';
+import type { AttachmentInput } from './services/emailApi';
 import {
   extractLocalPart,
   getEmailDomain,
@@ -59,7 +60,6 @@ import {
   isLocalDomain,
   verificationResultToChipStatus,
 } from './utils/recipientVerification';
-import type { AttachmentInput } from './services/emailApi';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -87,7 +87,11 @@ export function computeComposeBodyMaxHeight(
   const maxModalHeight = viewportHeight * 0.7;
   return Math.max(
     0,
-    maxModalHeight - titleBarHeight - formFieldsHeight - actionBarHeight - bottomMargin,
+    maxModalHeight -
+      titleBarHeight -
+      formFieldsHeight -
+      actionBarHeight -
+      bottomMargin,
   );
 }
 
@@ -170,9 +174,8 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
   const [htmlBody, setHtmlBody] = useState(prefill?.body ?? '');
   const [textBody, setTextBody] = useState(prefill?.body ?? '');
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
-  const [encryptionScheme, setEncryptionScheme] = useState<MessageEncryptionScheme>(
-    MessageEncryptionScheme.NONE,
-  );
+  const [encryptionScheme, setEncryptionScheme] =
+    useState<MessageEncryptionScheme>(MessageEncryptionScheme.NONE);
   const [sending, setSending] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showBounceWarning, setShowBounceWarning] = useState(false);
@@ -409,7 +412,10 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
   // ── Send handler ──────────────────────────────────────────────────────
   const hasValidRecipient = to.some(isValidEmail);
 
-  const warningRecipients = getWarningRecipients(allRecipients, recipientStatuses);
+  const warningRecipients = getWarningRecipients(
+    allRecipients,
+    recipientStatuses,
+  );
 
   /** Actually perform the send (called directly or after bounce warning confirmation). */
   const executeSend = useCallback(async () => {
@@ -426,16 +432,22 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
       // Convert AttachmentFile[] to AttachmentInput[] (base64)
       const attachmentInputs: AttachmentInput[] = await Promise.all(
         attachments.map(async (att) => {
-          const base64 = att.base64Data ?? await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const result = reader.result as string;
-              resolve(result.split(',')[1] ?? result);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(att.file);
-          });
-          return { filename: att.filename, mimeType: att.mimeType, data: base64 };
+          const base64 =
+            att.base64Data ??
+            (await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = reader.result as string;
+                resolve(result.split(',')[1] ?? result);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(att.file);
+            }));
+          return {
+            filename: att.filename,
+            mimeType: att.mimeType,
+            data: base64,
+          };
         }),
       );
 
@@ -469,7 +481,20 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
     } finally {
       setSending(false);
     }
-  }, [hasValidRecipient, to, cc, bcc, subject, htmlBody, textBody, attachments, encryptionScheme, t, onClose, emailApi]);
+  }, [
+    hasValidRecipient,
+    to,
+    cc,
+    bcc,
+    subject,
+    htmlBody,
+    textBody,
+    attachments,
+    encryptionScheme,
+    t,
+    onClose,
+    emailApi,
+  ]);
 
   /** Click handler for the Send button — shows bounce warning if needed. */
   const handleSend = useCallback(async () => {
@@ -561,7 +586,9 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
               size="small"
               onClick={handleToggleMaximize}
               sx={{ color: 'inherit' }}
-              aria-label={maximized ? 'Restore compose size' : 'Maximize compose'}
+              aria-label={
+                maximized ? 'Restore compose size' : 'Maximize compose'
+              }
             >
               {maximized ? (
                 <CloseFullscreenIcon fontSize="small" />
@@ -655,10 +682,7 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
         />
       </Box>
 
-      <AttachmentBar
-        attachments={attachments}
-        onChange={setAttachments}
-      />
+      <AttachmentBar attachments={attachments} onChange={setAttachments} />
 
       {!hasValidRecipient && to.length > 0 && (
         <Typography variant="caption" color="error" role="alert">
@@ -667,7 +691,9 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
       )}
 
       {/* Action bar: Send button with encryption selector */}
-      <Box sx={{ display: 'flex', gap: 1, flexShrink: 0, alignItems: 'center' }}>
+      <Box
+        sx={{ display: 'flex', gap: 1, flexShrink: 0, alignItems: 'center' }}
+      >
         <EncryptionSelector
           value={encryptionScheme}
           onChange={setEncryptionScheme}
@@ -795,18 +821,27 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
           anchor="bottom"
           open={open && !minimized}
           onClose={handleCloseAttempt}
-          onOpen={() => {/* required by SwipeableDrawer */}}
+          onOpen={() => {
+            /* required by SwipeableDrawer */
+          }}
           disableSwipeToOpen
-          PaperProps={{
-            sx: { height: '100vh' },
-            'data-testid': 'compose-modal',
-            role: 'dialog',
-            'aria-label': titleText,
-          } as any}
+          PaperProps={
+            {
+              sx: { height: '100vh' },
+              'data-testid': 'compose-modal',
+              role: 'dialog',
+              'aria-label': titleText,
+            } as React.HTMLAttributes<HTMLDivElement> & { sx: object }
+          }
         >
           <Box
             ref={modalRef}
-            sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              position: 'relative',
+            }}
           >
             {titleBar}
             {composeBody}
@@ -919,7 +954,8 @@ const ComposeModalInner: FC<ComposeModalProps> = ({
 // ─── Portal wrapper that reads from BrightMailContext ────────────────────────
 
 const ComposeModal: FC = () => {
-  const { composeModal, closeCompose, minimizeCompose, toggleMaximize } = useBrightMail();
+  const { composeModal, closeCompose, minimizeCompose, toggleMaximize } =
+    useBrightMail();
 
   if (composeModal.status === 'closed') return null;
 
