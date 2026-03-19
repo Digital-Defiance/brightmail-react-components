@@ -6,10 +6,10 @@
  *
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.7, 2.1, 2.2, 2.3, 2.4, 8.1
  */
+import { faEnvelope } from '@awesome.me/kit-a20d532681/icons/classic/solid';
 import { BrightChainSubLogo } from '@brightchain/brightchain-react-components';
 import { BrightMailStrings } from '@brightchain/brightmail-lib';
 import { useI18n } from '@digitaldefiance/express-suite-react-components';
-import { faEnvelope } from '@awesome.me/kit-a20d532681/icons/classic/solid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DraftsIcon from '@mui/icons-material/Drafts';
 import EditIcon from '@mui/icons-material/Edit';
@@ -32,11 +32,31 @@ export const SIDEBAR_WIDTH = 240;
 
 /** Navigation items rendered in the sidebar. */
 const NAV_ITEMS = [
-  { stringKey: BrightMailStrings.Nav_Inbox, icon: <InboxIcon />, route: '/brightmail' },
-  { stringKey: BrightMailStrings.Nav_Sent, icon: <SendIcon />, route: '/brightmail/sent' },
-  { stringKey: BrightMailStrings.Nav_Drafts, icon: <DraftsIcon />, route: '/brightmail/drafts' },
-  { stringKey: BrightMailStrings.Nav_Trash, icon: <DeleteIcon />, route: '/brightmail/trash' },
-  { stringKey: BrightMailStrings.Nav_Labels, icon: <LabelIcon />, route: '/brightmail/labels' },
+  {
+    stringKey: BrightMailStrings.Nav_Inbox,
+    icon: <InboxIcon />,
+    route: '/brightmail',
+  },
+  {
+    stringKey: BrightMailStrings.Nav_Sent,
+    icon: <SendIcon />,
+    route: '/brightmail/sent',
+  },
+  {
+    stringKey: BrightMailStrings.Nav_Drafts,
+    icon: <DraftsIcon />,
+    route: '/brightmail/drafts',
+  },
+  {
+    stringKey: BrightMailStrings.Nav_Trash,
+    icon: <DeleteIcon />,
+    route: '/brightmail/trash',
+  },
+  {
+    stringKey: BrightMailStrings.Nav_Labels,
+    icon: <LabelIcon />,
+    route: '/brightmail/labels',
+  },
 ] as const;
 
 // ─── Props ──────────────────────────────────────────────────────────────────
@@ -81,12 +101,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       let nextIndex = -1;
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        nextIndex =
-          currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
-        nextIndex =
-          currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
       }
 
       if (nextIndex >= 0) {

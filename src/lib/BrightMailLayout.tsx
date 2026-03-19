@@ -14,24 +14,18 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
 import { FC, memo, useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import './BrightMail.scss';
 import { BrightMailProvider, useBrightMail } from './BrightMailContext';
 import ComposeModal from './ComposeModal';
 import ReadingPane from './ReadingPane';
-import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
-import './BrightMail.scss';
+import Sidebar from './Sidebar';
 
 // ─── Inner layout (must be inside BrightMailProvider) ───────────────────────
 
 const BrightMailLayoutInner: FC = () => {
-  const theme = useTheme();
-  const {
-    sidebarOpen,
-    setSidebarOpen,
-    selectedEmailId,
-  } = useBrightMail();
+  const { sidebarOpen, setSidebarOpen, selectedEmailId } = useBrightMail();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -53,7 +47,9 @@ const BrightMailLayoutInner: FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
+    <Box
+      sx={{ display: 'flex', height: 'calc(100vh - 64px)', overflow: 'hidden' }}
+    >
       {/* Sidebar */}
       <Sidebar
         open={isDesktop ? true : sidebarOpen}

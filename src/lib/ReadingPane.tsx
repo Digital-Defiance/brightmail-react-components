@@ -40,15 +40,16 @@ const ReadingPane: FC<ReadingPaneProps> = ({ emailId }) => {
           height: '100%',
         }}
       >
-        <Typography color="text.secondary">
-          Select an email to read
-        </Typography>
+        <Typography color="text.secondary">Select an email to read</Typography>
       </Box>
     );
   }
 
   return (
-    <Box data-testid="reading-pane-thread" sx={{ height: '100%', overflow: 'auto', p: 2 }}>
+    <Box
+      data-testid="reading-pane-thread"
+      sx={{ height: '100%', overflow: 'auto', p: 2 }}
+    >
       <MemoryRouter key={emailId} initialEntries={initialEntries}>
         <Routes>
           <Route

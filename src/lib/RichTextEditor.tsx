@@ -43,7 +43,10 @@ import {
  */
 export function sanitizeHtml(html: string): string {
   // Remove <script> tags and their content (case-insensitive, handles attributes)
-  let result = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  let result = html.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    '',
+  );
   // Remove self-closing script tags
   result = result.replace(/<script\b[^>]*\/>/gi, '');
   // Remove orphaned opening script tags (no closing tag)
@@ -53,7 +56,10 @@ export function sanitizeHtml(html: string): string {
   result = result.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
 
   // Remove javascript: URIs in href/src/action attributes
-  result = result.replace(/(href|src|action)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, '');
+  result = result.replace(
+    /(href|src|action)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi,
+    '',
+  );
   // Also handle unquoted javascript: URIs
   result = result.replace(/(href|src|action)\s*=\s*javascript:[^\s>]*/gi, '');
 
@@ -81,7 +87,6 @@ export function extractPlainText(html: string): string {
   result = result.replace(/\n{3,}/g, '\n\n');
   return result.trim();
 }
-
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

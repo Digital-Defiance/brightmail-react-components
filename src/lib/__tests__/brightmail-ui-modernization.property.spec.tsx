@@ -11,6 +11,37 @@ import fc from 'fast-check';
 import React from 'react';
 import AvatarCircle, { getAvatarColor } from '../AvatarCircle';
 
+// ─── Property 13 imports ────────────────────────────────────────────────────
+
+import { act, renderHook } from '@testing-library/react';
+import { BrightMailProvider, useBrightMail } from '../BrightMailContext';
+
+// ─── Property 2 imports ─────────────────────────────────────────────────────
+
+import type { BlockId, IEmailMetadata } from '@brightchain/brightchain-lib';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import EmailRow, { getSenderDisplay, isEmailRead } from '../EmailRow';
+
+// ─── Property 3 imports ─────────────────────────────────────────────────────
+
+import { fireEvent } from '@testing-library/react';
+
+// ─── Property 4 imports ─────────────────────────────────────────────────────
+
+import { toggleSelection } from '../EmailList';
+
+// ─── Property 5–8 imports ───────────────────────────────────────────────────
+
+import RecipientChipInput, { isValidEmail } from '../RecipientChipInput';
+
+// ─── Property 9 imports ─────────────────────────────────────────────────────
+
+import { clampPosition, shouldConfirmClose } from '../ComposeModal';
+
+// ─── Property 11 imports ────────────────────────────────────────────────────
+
+import { getInitialExpandedSet } from '../ThreadView';
+
 // ─── Mocks for ComposeModal transitive dependencies (Property 9) ────────────
 // ComposeModal imports BrightChainStrings from brightchain-lib, which triggers
 // a deep initialization chain. These mocks prevent that runtime failure while
@@ -134,11 +165,11 @@ describe('Feature: brightmail-ui-modernization, Property 1: Avatar color determi
         const expectedChar =
           trimmed.length === 0
             ? '?'
-            : String.fromCodePoint(trimmed.codePointAt(0)!);
+            : String.fromCodePoint(trimmed.codePointAt(0) ?? 63);
 
         const avatar = document.querySelector('.MuiAvatar-root');
         expect(avatar).not.toBeNull();
-        expect(avatar!.textContent).toBe(expectedChar);
+        expect(avatar?.textContent).toBe(expectedChar);
 
         cleanup();
       }),
@@ -153,7 +184,7 @@ describe('Feature: brightmail-ui-modernization, Property 1: Avatar color determi
 
         const avatar = document.querySelector('.MuiAvatar-root');
         expect(avatar).not.toBeNull();
-        expect(avatar!.getAttribute('aria-label')).toBe(name);
+        expect(avatar?.getAttribute('aria-label')).toBe(name);
 
         cleanup();
       }),
@@ -161,14 +192,6 @@ describe('Feature: brightmail-ui-modernization, Property 1: Avatar color determi
     );
   });
 });
-
-// ─── Property 13 imports ────────────────────────────────────────────────────
-
-import { act, renderHook } from '@testing-library/react';
-import {
-  BrightMailProvider,
-  useBrightMail,
-} from '../BrightMailContext';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -289,25 +312,10 @@ describe('Feature: brightmail-ui-modernization, Property 13: Sidebar state persi
   });
 });
 
-
-// ─── Property 2 imports ─────────────────────────────────────────────────────
-
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import type { IEmailMetadata } from '@brightchain/brightchain-lib';
-import type { BlockId } from '@brightchain/brightchain-lib';
-import EmailRow, {
-  getSenderDisplay,
-  isEmailRead,
-} from '../EmailRow';
-
 // ─── Arbitrary generators for Property 2 ────────────────────────────────────
 
 /** Helper: creates an IMailbox-compatible object without importing runtime code. */
-function makeMailbox(
-  localPart: string,
-  domain: string,
-  displayName?: string,
-) {
+function makeMailbox(localPart: string, domain: string, displayName?: string) {
   return {
     localPart,
     domain,
@@ -376,7 +384,8 @@ const arbReadReceipts = fc.oneof(
     .array(
       fc.tuple(
         arbHexId,
-        fc.date({ min: new Date('2000-01-01'), max: new Date('2040-01-01') })
+        fc
+          .date({ min: new Date('2000-01-01'), max: new Date('2040-01-01') })
           .filter((d) => !isNaN(d.getTime())),
       ),
       { minLength: 1, maxLength: 3 },
@@ -393,7 +402,8 @@ const arbEmailMetadata: fc.Arbitrary<IEmailMetadata<string>> = fc
     from: arbMailbox,
     to: arbMailboxArray,
     subject: arbSubject,
-    date: fc.date({ min: new Date('2020-01-01'), max: new Date('2030-01-01') })
+    date: fc
+      .date({ min: new Date('2020-01-01'), max: new Date('2030-01-01') })
       .filter((d) => !isNaN(d.getTime())),
     keywords: arbKeywords,
     readReceipts: arbReadReceipts,
@@ -401,44 +411,47 @@ const arbEmailMetadata: fc.Arbitrary<IEmailMetadata<string>> = fc
       .stringMatching(/^[0-9a-f]{16}$/)
       .map((s: string) => `<${s}@test.local>`),
   })
-  .map((fields) => ({
-    // IBlockMetadata fields
-    blockId: 'block-0000' as BlockId,
-    createdAt: fields.date,
-    expiresAt: null,
-    durabilityLevel: 'standard' as const,
-    parityBlockIds: [] as BlockId[],
-    accessCount: 0,
-    lastAccessedAt: fields.date,
-    replicationStatus: 'pending' as const,
-    targetReplicationFactor: 0,
-    replicaNodeIds: [] as string[],
-    size: 0,
-    checksum: '0000',
+  .map(
+    (fields) =>
+      ({
+        // IBlockMetadata fields
+        blockId: 'block-0000' as BlockId,
+        createdAt: fields.date,
+        expiresAt: null,
+        durabilityLevel: 'standard' as const,
+        parityBlockIds: [] as BlockId[],
+        accessCount: 0,
+        lastAccessedAt: fields.date,
+        replicationStatus: 'pending' as const,
+        targetReplicationFactor: 0,
+        replicaNodeIds: [] as string[],
+        size: 0,
+        checksum: '0000',
 
-    // IMessageMetadata fields
-    messageType: 'email',
-    senderId: 'sender-1',
-    recipients: ['recipient-1'],
-    priority: 1 as const, // MessagePriority.NORMAL
-    deliveryStatus: new Map<string, string>(),
-    acknowledgments: new Map<string, Date>(),
-    encryptionScheme: 'none' as const,
-    isCBL: false,
+        // IMessageMetadata fields
+        messageType: 'email',
+        senderId: 'sender-1',
+        recipients: ['recipient-1'],
+        priority: 1 as const, // MessagePriority.NORMAL
+        deliveryStatus: new Map<string, string>(),
+        acknowledgments: new Map<string, Date>(),
+        encryptionScheme: 'none' as const,
+        isCBL: false,
 
-    // IEmailMetadata fields
-    from: fields.from,
-    to: fields.to,
-    messageId: fields.messageId,
-    date: fields.date,
-    mimeVersion: '1.0',
-    contentType: makeContentType('text', 'plain'),
-    customHeaders: new Map<string, string[]>(),
-    deliveryReceipts: new Map(),
-    readReceipts: fields.readReceipts,
-    subject: fields.subject,
-    keywords: fields.keywords,
-  }) as unknown as IEmailMetadata<string>);
+        // IEmailMetadata fields
+        from: fields.from,
+        to: fields.to,
+        messageId: fields.messageId,
+        date: fields.date,
+        mimeVersion: '1.0',
+        contentType: makeContentType('text', 'plain'),
+        customHeaders: new Map<string, string[]>(),
+        deliveryReceipts: new Map(),
+        readReceipts: fields.readReceipts,
+        subject: fields.subject,
+        keywords: fields.keywords,
+      }) as unknown as IEmailMetadata<string>,
+  );
 
 // ─── Theme wrapper for rendering ────────────────────────────────────────────
 
@@ -450,8 +463,12 @@ function renderEmailRow(email: IEmailMetadata<string>) {
       <EmailRow
         email={email}
         selected={false}
-        onToggleSelect={() => {}}
-        onClick={() => {}}
+        onToggleSelect={() => {
+          /* noop */
+        }}
+        onClick={() => {
+          /* noop */
+        }}
       />
     </ThemeProvider>,
   );
@@ -479,11 +496,9 @@ describe('Feature: brightmail-ui-modernization, Property 2: Email row rendering 
         renderEmailRow(email);
 
         const expectedSender = getSenderDisplay(email);
-        const senderEl = document.querySelector(
-          '[data-testid="email-sender"]',
-        );
+        const senderEl = document.querySelector('[data-testid="email-sender"]');
         expect(senderEl).not.toBeNull();
-        expect(senderEl!.textContent).toBe(expectedSender);
+        expect(senderEl?.textContent).toBe(expectedSender);
 
         cleanup();
       }),
@@ -499,7 +514,7 @@ describe('Feature: brightmail-ui-modernization, Property 2: Email row rendering 
         const dateEl = document.querySelector('[data-testid="email-date"]');
         expect(dateEl).not.toBeNull();
         // Date element should have non-empty text content
-        expect(dateEl!.textContent!.length).toBeGreaterThan(0);
+        expect((dateEl?.textContent ?? '').length).toBeGreaterThan(0);
 
         cleanup();
       }),
@@ -519,7 +534,7 @@ describe('Feature: brightmail-ui-modernization, Property 2: Email row rendering 
         // The subject element text should contain the subject string
         const subject = email.subject ?? '';
         if (subject.length > 0) {
-          expect(subjectEl!.textContent).toContain(subject);
+          expect(subjectEl?.textContent).toContain(subject);
         }
 
         cleanup();
@@ -540,13 +555,16 @@ describe('Feature: brightmail-ui-modernization, Property 2: Email row rendering 
             '[data-testid="email-sender"]',
           );
           expect(senderEl).not.toBeNull();
-          const senderStyle = window.getComputedStyle(senderEl!);
+          const senderStyle = window.getComputedStyle(senderEl as Element);
           expect(senderStyle.fontWeight).toBe('600');
 
           // Row ListItem should have a non-transparent left border
-          const listItem = document.querySelector('[data-testid^="email-row-"]');
+          const listItem = document.querySelector(
+            '[data-testid^="email-row-"]',
+          );
           expect(listItem).not.toBeNull();
-          const listItemStyle = listItem!.getAttribute('style') ?? '';
+          const listItemStyle =
+            (listItem as Element).getAttribute('style') ?? '';
           // The border-left should contain the primary color, not transparent
           expect(listItemStyle).not.toContain('transparent');
 
@@ -569,10 +587,10 @@ describe('Feature: brightmail-ui-modernization, Property 2: Email row rendering 
           const chips = document.querySelectorAll(
             '[data-testid="email-label-chip"]',
           );
-          expect(chips.length).toBe(email.keywords!.length);
+          expect(chips.length).toBe((email.keywords ?? []).length);
 
           // Each chip should contain the label text
-          email.keywords!.forEach((label, i) => {
+          (email.keywords ?? []).forEach((label, i) => {
             expect(chips[i].textContent).toContain(label);
           });
 
@@ -583,11 +601,6 @@ describe('Feature: brightmail-ui-modernization, Property 2: Email row rendering 
     );
   });
 });
-
-
-// ─── Property 3 imports ─────────────────────────────────────────────────────
-
-import { fireEvent } from '@testing-library/react';
 
 // ─── Property 3 tests ───────────────────────────────────────────────────────
 
@@ -654,11 +667,6 @@ describe('Feature: brightmail-ui-modernization, Property 3: Star toggle is a rou
   });
 });
 
-
-// ─── Property 4 imports ─────────────────────────────────────────────────────
-
-import { toggleSelection } from '../EmailList';
-
 // ─── Arbitrary generators for Property 4 ────────────────────────────────────
 
 /** Arbitrary: a short email-style ID string. */
@@ -684,105 +692,84 @@ describe('Feature: brightmail-ui-modernization, Property 4: Selection toggle pre
 
   it('toggling an absent ID adds it — set size increases by 1', () => {
     fc.assert(
-      fc.property(
-        arbEmailIdSet,
-        arbEmailId,
-        (set, id) => {
-          // Ensure the ID is not already in the set
-          const withoutId = new Set(set);
-          withoutId.delete(id);
+      fc.property(arbEmailIdSet, arbEmailId, (set, id) => {
+        // Ensure the ID is not already in the set
+        const withoutId = new Set(set);
+        withoutId.delete(id);
 
-          const result = toggleSelection(withoutId, id);
+        const result = toggleSelection(withoutId, id);
 
-          expect(result.has(id)).toBe(true);
-          expect(result.size).toBe(withoutId.size + 1);
-        },
-      ),
+        expect(result.has(id)).toBe(true);
+        expect(result.size).toBe(withoutId.size + 1);
+      }),
       { numRuns: 100 },
     );
   });
 
   it('toggling a present ID removes it — set size decreases by 1', () => {
     fc.assert(
-      fc.property(
-        arbEmailIdSet,
-        arbEmailId,
-        (set, id) => {
-          // Ensure the ID is in the set
-          const withId = new Set(set);
-          withId.add(id);
+      fc.property(arbEmailIdSet, arbEmailId, (set, id) => {
+        // Ensure the ID is in the set
+        const withId = new Set(set);
+        withId.add(id);
 
-          const result = toggleSelection(withId, id);
+        const result = toggleSelection(withId, id);
 
-          expect(result.has(id)).toBe(false);
-          expect(result.size).toBe(withId.size - 1);
-        },
-      ),
+        expect(result.has(id)).toBe(false);
+        expect(result.size).toBe(withId.size - 1);
+      }),
       { numRuns: 100 },
     );
   });
 
   it('toggling any ID changes set size by exactly 1', () => {
     fc.assert(
-      fc.property(
-        arbEmailIdSet,
-        arbEmailId,
-        (set, id) => {
-          const result = toggleSelection(set, id);
-          expect(Math.abs(result.size - set.size)).toBe(1);
-        },
-      ),
+      fc.property(arbEmailIdSet, arbEmailId, (set, id) => {
+        const result = toggleSelection(set, id);
+        expect(Math.abs(result.size - set.size)).toBe(1);
+      }),
       { numRuns: 100 },
     );
   });
 
   it('toggling twice returns to the original set (round-trip)', () => {
     fc.assert(
-      fc.property(
-        arbEmailIdSet,
-        arbEmailId,
-        (set, id) => {
-          const once = toggleSelection(set, id);
-          const twice = toggleSelection(once, id);
+      fc.property(arbEmailIdSet, arbEmailId, (set, id) => {
+        const once = toggleSelection(set, id);
+        const twice = toggleSelection(once, id);
 
-          // Same size
-          expect(twice.size).toBe(set.size);
-          // Same elements
-          for (const elem of set) {
-            expect(twice.has(elem)).toBe(true);
-          }
-          for (const elem of twice) {
-            expect(set.has(elem)).toBe(true);
-          }
-        },
-      ),
+        // Same size
+        expect(twice.size).toBe(set.size);
+        // Same elements
+        for (const elem of set) {
+          expect(twice.has(elem)).toBe(true);
+        }
+        for (const elem of twice) {
+          expect(set.has(elem)).toBe(true);
+        }
+      }),
       { numRuns: 100 },
     );
   });
 
   it('toggle does not mutate the original set', () => {
     fc.assert(
-      fc.property(
-        arbEmailIdSet,
-        arbEmailId,
-        (set, id) => {
-          const originalSize = set.size;
-          const originalElements = new Set(set);
+      fc.property(arbEmailIdSet, arbEmailId, (set, id) => {
+        const originalSize = set.size;
+        const originalElements = new Set(set);
 
-          toggleSelection(set, id);
+        toggleSelection(set, id);
 
-          // Original set must be unchanged
-          expect(set.size).toBe(originalSize);
-          for (const elem of originalElements) {
-            expect(set.has(elem)).toBe(true);
-          }
-        },
-      ),
+        // Original set must be unchanged
+        expect(set.size).toBe(originalSize);
+        for (const elem of originalElements) {
+          expect(set.has(elem)).toBe(true);
+        }
+      }),
       { numRuns: 100 },
     );
   });
 });
-
 
 // ─── Property 14: Email list keyboard navigation ────────────────────────────
 
@@ -799,7 +786,7 @@ function arrowDownIndex(currentIndex: number, rowCount: number): number {
 }
 
 /** ArrowUp: move focus to the previous row, clamped to the first index. */
-function arrowUpIndex(currentIndex: number, rowCount: number): number {
+function arrowUpIndex(currentIndex: number, _rowCount: number): number {
   return Math.max(currentIndex - 1, 0);
 }
 
@@ -934,11 +921,6 @@ describe('Feature: brightmail-ui-modernization, Property 14: Email list keyboard
   });
 });
 
-
-// ─── Property 5–8 imports ───────────────────────────────────────────────────
-
-import RecipientChipInput, { isValidEmail } from '../RecipientChipInput';
-
 // ─── Arbitrary generators for Properties 5–8 ───────────────────────────────
 
 /** Arbitrary: a valid email address (local@domain.tld). */
@@ -954,9 +936,9 @@ const arbInvalidEmail = fc.oneof(
   // No @ at all
   fc.stringMatching(/^[a-z][a-z0-9]{1,15}$/),
   // Empty local part
-  fc.stringMatching(/^[a-z][a-z0-9]{0,8}\.[a-z]{2,4}$/).map(
-    (domain) => `@${domain}`,
-  ),
+  fc
+    .stringMatching(/^[a-z][a-z0-9]{0,8}\.[a-z]{2,4}$/)
+    .map((domain) => `@${domain}`),
   // No dot in domain
   fc
     .tuple(
@@ -973,9 +955,7 @@ const arbInvalidEmail = fc.oneof(
     )
     .map(([a, b, domain]) => `${a}@${b}@${domain}`),
   // Domain ends with dot
-  fc
-    .stringMatching(/^[a-z][a-z0-9]{0,8}$/)
-    .map((local) => `${local}@example.`),
+  fc.stringMatching(/^[a-z][a-z0-9]{0,8}$/).map((local) => `${local}@example.`),
 );
 
 /** Arbitrary: a non-empty array of valid emails (1–5). */
@@ -985,10 +965,10 @@ const arbValidEmailList = fc.array(arbValidEmail, {
 });
 
 /** Arbitrary: a non-empty array of mixed valid/invalid emails. */
-const arbMixedEmailList = fc.array(
-  fc.oneof(arbValidEmail, arbInvalidEmail),
-  { minLength: 1, maxLength: 8 },
-);
+const arbMixedEmailList = fc.array(fc.oneof(arbValidEmail, arbInvalidEmail), {
+  minLength: 1,
+  maxLength: 8,
+});
 
 // ─── Property 5 tests ───────────────────────────────────────────────────────
 
@@ -1018,7 +998,9 @@ describe('Feature: brightmail-ui-modernization, Property 5: Chip creation on val
         render(
           <RecipientChipInput
             value={emails}
-            onChange={() => {}}
+            onChange={() => {
+              /* noop */
+            }}
             label="To"
           />,
         );
@@ -1150,7 +1132,9 @@ describe('Feature: brightmail-ui-modernization, Property 7: Invalid email produc
         render(
           <RecipientChipInput
             value={[email]}
-            onChange={() => {}}
+            onChange={() => {
+              /* noop */
+            }}
             label="To"
           />,
         );
@@ -1214,7 +1198,9 @@ describe('Feature: brightmail-ui-modernization, Property 8: Paste splits and con
         render(
           <RecipientChipInput
             value={emails}
-            onChange={() => {}}
+            onChange={() => {
+              /* noop */
+            }}
             label="To"
           />,
         );
@@ -1237,19 +1223,18 @@ describe('Feature: brightmail-ui-modernization, Property 8: Paste splits and con
   });
 });
 
-
-// ─── Property 9 imports ─────────────────────────────────────────────────────
-
-import { shouldConfirmClose, clampPosition } from '../ComposeModal';
-
 // ─── Arbitrary generators for Property 9 ────────────────────────────────────
 
 /** Arbitrary: non-empty string that has at least one non-whitespace character after trimming. */
 const arbNonEmptyBody = fc
   .tuple(
-    fc.string({ minLength: 0, maxLength: 10 }).map((s) => s.replace(/\S/g, ' ')), // optional leading whitespace
+    fc
+      .string({ minLength: 0, maxLength: 10 })
+      .map((s) => s.replace(/\S/g, ' ')), // optional leading whitespace
     fc.stringMatching(/^[A-Za-z0-9][A-Za-z0-9 ]{0,49}$/), // at least one non-whitespace char
-    fc.string({ minLength: 0, maxLength: 10 }).map((s) => s.replace(/\S/g, ' ')), // optional trailing whitespace
+    fc
+      .string({ minLength: 0, maxLength: 10 })
+      .map((s) => s.replace(/\S/g, ' ')), // optional trailing whitespace
   )
   .map(([leading, core, trailing]) => `${leading}${core}${trailing}`);
 
@@ -1313,7 +1298,6 @@ describe('Feature: brightmail-ui-modernization, Property 9: Close confirmation d
   });
 });
 
-
 // ─── Arbitrary generators for Property 10 ───────────────────────────────────
 
 /** Arbitrary: viewport width between 320 and 3840. */
@@ -1359,30 +1343,22 @@ describe('Feature: brightmail-ui-modernization, Property 10: Drag reposition sta
 
   it('clamped position always has x >= 0 and y >= 0', () => {
     fc.assert(
-      fc.property(
-        arbViewportAndModal,
-        arbPosition,
-        ([vw, vh, mw, mh], pos) => {
-          const result = clampPosition(pos, mw, mh, vw, vh);
-          expect(result.x).toBeGreaterThanOrEqual(0);
-          expect(result.y).toBeGreaterThanOrEqual(0);
-        },
-      ),
+      fc.property(arbViewportAndModal, arbPosition, ([vw, vh, mw, mh], pos) => {
+        const result = clampPosition(pos, mw, mh, vw, vh);
+        expect(result.x).toBeGreaterThanOrEqual(0);
+        expect(result.y).toBeGreaterThanOrEqual(0);
+      }),
       { numRuns: 100 },
     );
   });
 
   it('clamped position keeps modal within viewport right and bottom edges', () => {
     fc.assert(
-      fc.property(
-        arbViewportAndModal,
-        arbPosition,
-        ([vw, vh, mw, mh], pos) => {
-          const result = clampPosition(pos, mw, mh, vw, vh);
-          expect(result.x + mw).toBeLessThanOrEqual(vw);
-          expect(result.y + mh).toBeLessThanOrEqual(vh);
-        },
-      ),
+      fc.property(arbViewportAndModal, arbPosition, ([vw, vh, mw, mh], pos) => {
+        const result = clampPosition(pos, mw, mh, vw, vh);
+        expect(result.x + mw).toBeLessThanOrEqual(vw);
+        expect(result.y + mh).toBeLessThanOrEqual(vh);
+      }),
       { numRuns: 100 },
     );
   });
@@ -1414,16 +1390,12 @@ describe('Feature: brightmail-ui-modernization, Property 10: Drag reposition sta
 
   it('clampPosition is idempotent — clamping twice gives the same result as clamping once', () => {
     fc.assert(
-      fc.property(
-        arbViewportAndModal,
-        arbPosition,
-        ([vw, vh, mw, mh], pos) => {
-          const once = clampPosition(pos, mw, mh, vw, vh);
-          const twice = clampPosition(once, mw, mh, vw, vh);
-          expect(twice.x).toBe(once.x);
-          expect(twice.y).toBe(once.y);
-        },
-      ),
+      fc.property(arbViewportAndModal, arbPosition, ([vw, vh, mw, mh], pos) => {
+        const once = clampPosition(pos, mw, mh, vw, vh);
+        const twice = clampPosition(once, mw, mh, vw, vh);
+        expect(twice.x).toBe(once.x);
+        expect(twice.y).toBe(once.y);
+      }),
       { numRuns: 100 },
     );
   });
@@ -1463,10 +1435,6 @@ describe('Feature: brightmail-ui-modernization, Property 10: Drag reposition sta
     );
   });
 });
-
-// ─── Property 11 imports ────────────────────────────────────────────────────
-
-import { getInitialExpandedSet } from '../ThreadView';
 
 // ─── Arbitrary generators for Property 11 ───────────────────────────────────
 
@@ -1568,7 +1536,6 @@ describe('Feature: brightmail-ui-modernization, Property 11: Thread initial coll
     );
   });
 });
-
 
 // ─── Property 12 tests ─────────────────────────────────────────────────────
 

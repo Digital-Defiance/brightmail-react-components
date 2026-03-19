@@ -11,6 +11,12 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
 
+// Import after mocks
+import AttachmentBar, {
+  type AttachmentBarProps,
+  type AttachmentFile,
+} from '../AttachmentBar';
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
@@ -37,18 +43,9 @@ jest.mock('@brightchain/brightchain-lib', () => ({
   },
 }));
 
-// Import after mocks
-import AttachmentBar, {
-  type AttachmentBarProps,
-  type AttachmentFile,
-} from '../AttachmentBar';
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function makeAttachment(
-  name: string,
-  sizeBytes: number,
-): AttachmentFile {
+function makeAttachment(name: string, sizeBytes: number): AttachmentFile {
   return {
     file: new File(['x'.repeat(Math.min(sizeBytes, 64))], name, {
       type: 'application/octet-stream',

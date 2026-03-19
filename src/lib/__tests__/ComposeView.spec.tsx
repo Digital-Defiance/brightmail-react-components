@@ -17,6 +17,9 @@ import {
   waitFor,
 } from '@testing-library/react';
 
+// Import after mocks
+import ComposeView from '../ComposeView';
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 jest.mock('react-router-dom', () => ({
@@ -81,7 +84,7 @@ jest.mock('@digitaldefiance/express-suite-react-components', () => ({
 // Mock Tiptap to avoid JSDOM issues with the editor
 jest.mock('@tiptap/react', () => ({
   useEditor: () => null,
-  EditorContent: ({ editor }: any) => (
+  EditorContent: ({ editor: _editor }: any) => (
     <div data-testid="tiptap-editor-content">editor content</div>
   ),
 }));
@@ -127,9 +130,6 @@ jest.mock('../hooks/useEmailApi', () => ({
   }),
 }));
 
-// Import after mocks
-import ComposeView from '../ComposeView';
-
 const mockedApi = {
   sendEmail: mockSendEmail,
   queryInbox: mockQueryInbox,
@@ -161,14 +161,10 @@ describe('ComposeView', () => {
     expect(screen.getByLabelText('Compose_To')).toBeInTheDocument();
     expect(screen.getByLabelText('Compose_Cc')).toBeInTheDocument();
     expect(screen.getByLabelText('Compose_Bcc')).toBeInTheDocument();
-    expect(
-      screen.getByLabelText('Compose_Subject'),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Compose_Subject')).toBeInTheDocument();
     // Body is now a RichTextEditor (falls back to TextField in test env after timeout)
     await waitFor(() => {
-      expect(
-        screen.getByTestId('rich-text-fallback'),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
     });
     expect(screen.getByTestId('send-button')).toBeInTheDocument();
   });
@@ -214,9 +210,7 @@ describe('ComposeView', () => {
 
     // Success snackbar should appear
     await waitFor(() => {
-      expect(
-        screen.getByText('Compose_SendSuccess'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Compose_SendSuccess')).toBeInTheDocument();
     });
 
     // onClose called after timeout
@@ -248,9 +242,7 @@ describe('ComposeView', () => {
 
     // Error snackbar should appear
     await waitFor(() => {
-      expect(
-        screen.getByText('Compose_SendError'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Compose_SendError')).toBeInTheDocument();
     });
 
     // Form data retained
@@ -286,8 +278,10 @@ describe('ComposeView', () => {
     await waitFor(() => {
       expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
     });
-    const bodyField = screen.getByTestId('rich-text-fallback').querySelector('textarea')!;
-    expect(bodyField.value).toContain('> Original message');
+    const bodyField = screen
+      .getByTestId('rich-text-fallback')
+      .querySelector('textarea');
+    expect(bodyField?.value).toContain('> Original message');
   });
 
   /**
@@ -311,8 +305,10 @@ describe('ComposeView', () => {
     await waitFor(() => {
       expect(screen.getByTestId('rich-text-fallback')).toBeInTheDocument();
     });
-    const bodyField = screen.getByTestId('rich-text-fallback').querySelector('textarea')!;
-    expect(bodyField.value).toContain('> Original message');
+    const fwdBodyField = screen
+      .getByTestId('rich-text-fallback')
+      .querySelector('textarea');
+    expect(fwdBodyField?.value).toContain('> Original message');
   });
 
   /**
@@ -324,9 +320,7 @@ describe('ComposeView', () => {
     const toField = screen.getByLabelText('Compose_To');
     fireEvent.change(toField, { target: { value: 'not-an-email' } });
 
-    expect(
-      screen.getByText('Compose_InvalidRecipient'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Compose_InvalidRecipient')).toBeInTheDocument();
   });
 
   /**
