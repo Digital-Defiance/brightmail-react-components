@@ -4,12 +4,12 @@ export { default as AvatarCircle } from './lib/AvatarCircle';
 export { default as BrightMailLayout } from './lib/BrightMailLayout';
 export { default as ComposeModal } from './lib/ComposeModal';
 export { default as ComposeView } from './lib/ComposeView';
-export { default as EncryptionSelector } from './lib/EncryptionSelector';
-export { default as KeyManagementSettings } from './lib/KeyManagementSettings';
 export { default as ConfirmDialog } from './lib/ConfirmDialog';
 export { default as EmailList } from './lib/EmailList';
 export { default as EmailRow } from './lib/EmailRow';
+export { default as EncryptionSelector } from './lib/EncryptionSelector';
 export { default as InboxView } from './lib/InboxView';
+export { default as KeyManagementSettings } from './lib/KeyManagementSettings';
 export { default as ReadingPane } from './lib/ReadingPane';
 export { default as RecipientChipInput } from './lib/RecipientChipInput';
 export { default as RichTextEditor } from './lib/RichTextEditor';
@@ -18,9 +18,9 @@ export { default as ThreadView } from './lib/ThreadView';
 
 // Context
 export {
+  default as BrightMailContext,
   BrightMailProvider,
   useBrightMail,
-  default as BrightMailContext,
 } from './lib/BrightMailContext';
 
 // Utility functions (exported for property testing and reuse)
@@ -28,31 +28,28 @@ export { getAvatarColor } from './lib/AvatarCircle';
 export { clampPosition, shouldConfirmClose } from './lib/ComposeModal';
 export { mapComposeStateToSendParams } from './lib/ComposeView';
 export { toggleSelection } from './lib/EmailList';
-export { getSenderDisplay, truncateSnippet, isEmailRead } from './lib/EmailRow';
-export { isValidEmail } from './lib/RecipientChipInput';
-export {
-  sanitizeHtml,
-  extractPlainText,
-} from './lib/RichTextEditor';
-export {
-  isValidSmimeCertificate,
-  isValidGpgPublicKey,
-  extractSmimeMetadata,
-  extractGpgMetadata,
-} from './lib/KeyManagementSettings';
+export { getSenderDisplay, isEmailRead, truncateSnippet } from './lib/EmailRow';
 export { findMissingRecipientKeys } from './lib/EncryptionSelector';
+export {
+  extractGpgMetadata,
+  extractSmimeMetadata,
+  isValidGpgPublicKey,
+  isValidSmimeCertificate,
+} from './lib/KeyManagementSettings';
+export { isValidEmail } from './lib/RecipientChipInput';
+export { extractPlainText, sanitizeHtml } from './lib/RichTextEditor';
+export { SIDEBAR_WIDTH } from './lib/Sidebar';
+export {
+  getInitialExpandedSet,
+  getMailboxDisplay,
+  sortByDateAscending,
+} from './lib/ThreadView';
 export {
   extractLocalPart,
   getEmailDomain,
   isLocalDomain,
   verificationResultToChipStatus,
 } from './lib/utils/recipientVerification';
-export { SIDEBAR_WIDTH } from './lib/Sidebar';
-export {
-  getMailboxDisplay,
-  sortByDateAscending,
-  getInitialExpandedSet,
-} from './lib/ThreadView';
 
 // Services
 export { createEmailApiClient, handleApiCall } from './lib/services/emailApi';
@@ -73,7 +70,7 @@ export { buildDeleteErrorMessage, bulkDelete } from './lib/bulkActions';
 export { formatDateLocale, formatDateTimeLocale } from './lib/dateFormatting';
 
 // Types
-export type { AttachmentFile, AttachmentBarProps } from './lib/AttachmentBar';
+export type { AttachmentBarProps, AttachmentFile } from './lib/AttachmentBar';
 export type { AvatarCircleProps } from './lib/AvatarCircle';
 export type {
   BrightMailContextValue,
@@ -87,12 +84,15 @@ export type { ComposeModalProps } from './lib/ComposeModal';
 export type { ConfirmDialogProps } from './lib/ConfirmDialog';
 export type { EmailListProps } from './lib/EmailList';
 export type { EmailRowProps } from './lib/EmailRow';
+export type { EncryptionSelectorProps } from './lib/EncryptionSelector';
 export type { InboxViewProps } from './lib/InboxView';
+export type {
+  KeyManagementSettingsProps,
+  KeyMetadata,
+} from './lib/KeyManagementSettings';
 export type { ReadingPaneProps } from './lib/ReadingPane';
 export type { RecipientChipInputProps } from './lib/RecipientChipInput';
 export type { RichTextEditorProps } from './lib/RichTextEditor';
-export type { EncryptionSelectorProps } from './lib/EncryptionSelector';
-export type { KeyManagementSettingsProps, KeyMetadata } from './lib/KeyManagementSettings';
 export type { SidebarProps } from './lib/Sidebar';
 
 /**

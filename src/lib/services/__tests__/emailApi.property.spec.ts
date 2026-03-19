@@ -1,3 +1,4 @@
+/* eslint-disable jest/expect-expect */
 /**
  * Property-based tests for EmailApiClient error envelope propagation.
  * Feature: brightmail-frontend, Property 2: API Error Envelope Propagation

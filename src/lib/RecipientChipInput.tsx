@@ -13,7 +13,7 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
-import React, {
+import {
   ClipboardEvent,
   FC,
   KeyboardEvent,
@@ -109,7 +109,9 @@ const RecipientChipInput: FC<RecipientChipInputProps> = ({
 
       // Build announcement for screen readers
       const added = parts.join(', ');
-      setAnnouncement(`Added ${parts.length === 1 ? 'recipient' : 'recipients'}: ${added}`);
+      setAnnouncement(
+        `Added ${parts.length === 1 ? 'recipient' : 'recipients'}: ${added}`,
+      );
       setInputValue('');
     },
     [value, onChange, onChipCommit],

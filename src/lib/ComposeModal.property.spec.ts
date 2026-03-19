@@ -12,6 +12,8 @@
 
 import fc from 'fast-check';
 
+import { computeComposeBodyMaxHeight } from './ComposeModal';
+
 // Mock dependencies that ComposeModal now imports transitively
 jest.mock('@brightchain/brightchain-lib', () => ({
   MessageEncryptionScheme: {
@@ -62,8 +64,6 @@ jest.mock('./hooks/useEmailApi', () => ({
   __esModule: true,
   useEmailApi: () => ({ sendEmail: jest.fn() }),
 }));
-
-import { computeComposeBodyMaxHeight } from './ComposeModal';
 
 describe('Feature: brightmail-composer-enhancements, Property 1: Modal max-height respects viewport bounds', () => {
   /**

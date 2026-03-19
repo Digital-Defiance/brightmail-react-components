@@ -1,3 +1,4 @@
+/* eslint-disable jest/no-conditional-expect */
 /**
  * Property-based tests for BrightMail frontend components.
  * Feature: brightmail-frontend
@@ -10,6 +11,50 @@
 import { cleanup, render } from '@testing-library/react';
 import fc from 'fast-check';
 import React from 'react';
+
+// Import after mocks
+import EmailListTable from '../EmailListTable';
+
+// ─── Import ComposeView utility functions ───────────────────────────────────
+
+import {
+  getForwardPrefill,
+  getReplyPrefill,
+  isValidEmail,
+  mapRecipientsToMailboxes,
+  parseEmailAddress,
+} from '../ComposeView';
+
+// ─── Import ThreadView utility functions ────────────────────────────────────
+
+import { getMailboxDisplay, sortByDateAscending } from '../ThreadView';
+
+// ─── Import bulk action utilities ───────────────────────────────────────────
+
+import { buildDeleteErrorMessage, bulkDelete } from '../bulkActions';
+
+// ─── Import date formatting utility ─────────────────────────────────────────
+
+import { formatDateLocale, formatDateTimeLocale } from '../dateFormatting';
+
+// ─── Property 15: All BrightMail Routes Require Authentication ──────────────
+
+/**
+ * For Property 15 we verify that the PrivateRoute component redirects
+ * unauthenticated users to /login for every BrightMail route.
+ *
+ * We re-implement a minimal PrivateRoute that mirrors the real one's
+ * behaviour (check isAuthenticated from context, redirect to /login if false)
+ * and verify the redirect happens for randomly-generated thread IDs.
+ */
+
+import {
+  MemoryRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -80,8 +125,7 @@ jest.mock('@digitaldefiance/express-suite-react-components', () => ({
   useI18n: () => ({
     tComponent: (_componentId: string, key: string) => key,
     t: (key: string) => key,
-    tBranded: 
-      (key: string) => key,
+    tBranded: (key: string) => key,
     changeLanguage: jest.fn(),
     currentLanguage: 'en',
   }),
@@ -103,9 +147,6 @@ jest.mock('../hooks/useEmailApi', () => ({
     getUnreadCount: jest.fn(),
   }),
 }));
-
-// Import after mocks
-import EmailListTable from '../EmailListTable';
 
 // ─── Generators ─────────────────────────────────────────────────────────────
 
@@ -260,16 +301,6 @@ describe('Feature: brightmail-frontend, Property 3: Inbox Row Rendering Complete
     );
   });
 });
-
-// ─── Import ComposeView utility functions ───────────────────────────────────
-
-import {
-  getForwardPrefill,
-  getReplyPrefill,
-  isValidEmail,
-  mapRecipientsToMailboxes,
-  parseEmailAddress,
-} from '../ComposeView';
 
 // ─── Additional Generators ──────────────────────────────────────────────────
 
@@ -549,10 +580,6 @@ describe('Feature: brightmail-frontend, Property 9: Reply and Forward Pre-fill M
   });
 });
 
-// ─── Import ThreadView utility functions ────────────────────────────────────
-
-import { getMailboxDisplay, sortByDateAscending } from '../ThreadView';
-
 // ─── Property 7: Thread Chronological Ordering ─────────────────────────────
 
 describe('Feature: brightmail-frontend, Property 7: Thread Chronological Ordering', () => {
@@ -770,10 +797,6 @@ describe('Feature: brightmail-frontend, Property 8: Thread Message Rendering Com
   });
 });
 
-// ─── Import bulk action utilities ───────────────────────────────────────────
-
-import { buildDeleteErrorMessage, bulkDelete } from '../bulkActions';
-
 // ─── Property 10: Bulk Delete Invokes All Selected IDs ──────────────────────
 
 describe('Feature: brightmail-frontend, Property 10: Bulk Delete Invokes All Selected IDs', () => {
@@ -927,10 +950,6 @@ describe('Feature: brightmail-frontend, Property 11: Delete Error Identifies Fai
   });
 });
 
-// ─── Import date formatting utility ─────────────────────────────────────────
-
-import { formatDateLocale, formatDateTimeLocale } from '../dateFormatting';
-
 // ─── Property 12: Locale-Aware Date Formatting ─────────────────────────────
 
 describe('Feature: brightmail-frontend, Property 12: Locale-Aware Date Formatting', () => {
@@ -1015,25 +1034,6 @@ describe('Feature: brightmail-frontend, Property 12: Locale-Aware Date Formattin
     );
   });
 });
-
-// ─── Property 15: All BrightMail Routes Require Authentication ──────────────
-
-/**
- * For Property 15 we verify that the PrivateRoute component redirects
- * unauthenticated users to /login for every BrightMail route.
- *
- * We re-implement a minimal PrivateRoute that mirrors the real one's
- * behaviour (check isAuthenticated from context, redirect to /login if false)
- * and verify the redirect happens for randomly-generated thread IDs.
- */
-
-import {
-  MemoryRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-} from 'react-router-dom';
 
 /**
  * Minimal PrivateRoute replica matching the real component's logic:

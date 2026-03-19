@@ -11,6 +11,9 @@
 import '@testing-library/jest-dom';
 import { act, render, screen, waitFor } from '@testing-library/react';
 
+// Import after mocks
+import ReadingPane from '../ReadingPane';
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 jest.mock('@digitaldefiance/ecies-lib', () => ({
@@ -55,25 +58,26 @@ jest.mock('@digitaldefiance/express-suite-react-components', () => ({
   }),
 }));
 
-const mockGetEmailThread = jest.fn();
-const mockMarkAsRead = jest.fn();
-
-jest.mock('../hooks/useEmailApi', () => ({
-  __esModule: true,
-  useEmailApi: () => ({
+jest.mock('../hooks/useEmailApi', () => {
+  const api = {
     sendEmail: jest.fn(),
     queryInbox: jest.fn(),
     getEmail: jest.fn(),
     getEmailContent: jest.fn(),
-    getEmailThread: mockGetEmailThread,
+    getEmailThread: jest.fn(),
     getDeliveryStatus: jest.fn(),
     replyToEmail: jest.fn(),
     forwardEmail: jest.fn(),
-    markAsRead: mockMarkAsRead,
+    markAsRead: jest.fn(),
     deleteEmail: jest.fn(),
     getUnreadCount: jest.fn(),
-  }),
-}));
+  };
+  return {
+    __esModule: true,
+    useEmailApi: () => api,
+    _getMockApi: () => api,
+  };
+});
 
 const mockOpenCompose = jest.fn();
 
@@ -90,9 +94,6 @@ jest.mock('../BrightMailContext', () => ({
     setSelectedEmailId: jest.fn(),
   }),
 }));
-
-// Import after mocks
-import ReadingPane from '../ReadingPane';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -160,6 +161,11 @@ function makeThreadEmail(
   } as any;
 }
 
+const mockedApi = require('../hooks/useEmailApi')._getMockApi() as Record<
+  string,
+  jest.Mock
+>;
+
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('ReadingPane', () => {
@@ -182,8 +188,8 @@ describe('ReadingPane', () => {
    */
   it('renders ThreadView via MemoryRouter when emailId is provided', async () => {
     const emails = [makeThreadEmail('msg-rp-1', 'Reading Pane Thread')];
-    mockGetEmailThread.mockResolvedValue(emails);
-    mockMarkAsRead.mockResolvedValue({} as any);
+    mockedApi.getEmailThread.mockResolvedValue(emails);
+    mockedApi.markAsRead.mockResolvedValue({} as any);
 
     await act(async () => {
       render(<ReadingPane emailId="msg-rp-1" />);
@@ -193,7 +199,7 @@ describe('ReadingPane', () => {
     expect(screen.getByTestId('reading-pane-thread')).toBeInTheDocument();
 
     // ThreadView fetches the thread using the messageId from MemoryRouter params
-    expect(mockGetEmailThread).toHaveBeenCalledWith('msg-rp-1');
+    expect(mockedApi.getEmailThread).toHaveBeenCalledWith('msg-rp-1');
 
     // Wait for thread content to appear
     await waitFor(() => {
@@ -207,15 +213,15 @@ describe('ReadingPane', () => {
   it('remounts ThreadView when emailId changes', async () => {
     const email1 = [makeThreadEmail('msg-a', 'Thread A')];
     const email2 = [makeThreadEmail('msg-b', 'Thread B')];
-    mockGetEmailThread
+    mockedApi.getEmailThread
       .mockResolvedValueOnce(email1)
       .mockResolvedValueOnce(email2);
-    mockMarkAsRead.mockResolvedValue({} as any);
+    mockedApi.markAsRead.mockResolvedValue({} as any);
 
     const { rerender } = render(<ReadingPane emailId="msg-a" />);
 
     await waitFor(() => {
-      expect(mockGetEmailThread).toHaveBeenCalledWith('msg-a');
+      expect(mockedApi.getEmailThread).toHaveBeenCalledWith('msg-a');
     });
 
     // Change the emailId — MemoryRouter should remount with new route
@@ -224,10 +230,10 @@ describe('ReadingPane', () => {
     });
 
     await waitFor(() => {
-      expect(mockGetEmailThread).toHaveBeenCalledWith('msg-b');
+      expect(mockedApi.getEmailThread).toHaveBeenCalledWith('msg-b');
     });
 
-    expect(mockGetEmailThread).toHaveBeenCalledTimes(2);
+    expect(mockedApi.getEmailThread).toHaveBeenCalledTimes(2);
   });
 
   /**
@@ -235,8 +241,8 @@ describe('ReadingPane', () => {
    */
   it('shows placeholder when emailId changes from a value to null', async () => {
     const emails = [makeThreadEmail('msg-c')];
-    mockGetEmailThread.mockResolvedValue(emails);
-    mockMarkAsRead.mockResolvedValue({} as any);
+    mockedApi.getEmailThread.mockResolvedValue(emails);
+    mockedApi.markAsRead.mockResolvedValue({} as any);
 
     const { rerender } = render(<ReadingPane emailId="msg-c" />);
 

@@ -7,18 +7,18 @@
  * Requirements: 2.1, 2.2, 2.3, 2.5, 2.6
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
+
+// Import after mocks
+import { ComposeModalInner, type ComposeModalProps } from '../ComposeModal';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 // Track the current useMediaQuery return value so tests can toggle mobile/desktop
 let mockIsMobile = false;
 
-jest.mock('@mui/material/useMediaQuery', () =>
-  jest.fn(() => mockIsMobile),
-);
+jest.mock('@mui/material/useMediaQuery', () => jest.fn(() => mockIsMobile));
 
 jest.mock('@digitaldefiance/ecies-lib', () => ({
   IECIESConfig: {},
@@ -109,9 +109,6 @@ jest.mock('../hooks/useEmailApi', () => ({
   }),
 }));
 
-// Import after mocks
-import { ComposeModalInner, type ComposeModalProps } from '../ComposeModal';
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const defaultProps: ComposeModalProps = {
@@ -151,7 +148,9 @@ describe('ComposeModal maximize behavior', () => {
     mockIsMobile = true;
     renderModal();
 
-    expect(screen.queryByTestId('compose-maximize-btn')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('compose-maximize-btn'),
+    ).not.toBeInTheDocument();
   });
 
   // ── Requirement 2.6: Maximize button hidden when minimized ────────────
@@ -160,7 +159,9 @@ describe('ComposeModal maximize behavior', () => {
     mockIsMobile = false;
     renderModal({ minimized: true });
 
-    expect(screen.queryByTestId('compose-maximize-btn')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('compose-maximize-btn'),
+    ).not.toBeInTheDocument();
   });
 
   // ── Requirement 2.5: Backdrop rendered in full-window mode ────────────
@@ -177,7 +178,9 @@ describe('ComposeModal maximize behavior', () => {
     mockIsMobile = false;
     renderModal({ maximized: false });
 
-    expect(screen.queryByTestId('compose-maximize-backdrop')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('compose-maximize-backdrop'),
+    ).not.toBeInTheDocument();
   });
 
   // ── Requirement 2.3: Icon changes between maximize and restore ────────

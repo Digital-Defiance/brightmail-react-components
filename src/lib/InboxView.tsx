@@ -157,7 +157,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
         }));
       }
     },
-    [state.pageSize],
+    [state.pageSize, emailApi],
   );
 
   // Fetch unread count separately
@@ -168,7 +168,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
     } catch {
       // Silently ignore unread count errors
     }
-  }, []);
+  }, [emailApi]);
 
   // On mount: restore saved pagination state or fetch page 1
   useEffect(() => {
@@ -185,6 +185,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
       fetchInbox(1);
     }
     fetchUnreadCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Restore scroll position after emails are loaded
@@ -287,7 +288,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
       selectedIds: new Set(failed),
     }));
     fetchUnreadCount();
-  }, [state.selectedIds, t, fetchUnreadCount]);
+  }, [state.selectedIds, t, fetchUnreadCount, emailApi]);
 
   const handleBulkMarkAsRead = useCallback(async () => {
     const ids = Array.from(state.selectedIds);
@@ -301,7 +302,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
     setState((prev) => ({ ...prev, selectedIds: new Set() }));
     fetchInbox(1);
     fetchUnreadCount();
-  }, [state.selectedIds, fetchInbox, fetchUnreadCount]);
+  }, [state.selectedIds, fetchInbox, fetchUnreadCount, emailApi]);
 
   const hasSelection = state.selectedIds.size > 0;
 
@@ -323,9 +324,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
   if (state.loading) {
     return (
       <Box data-testid="inbox-loading">
-        <Typography variant="h6">
-          {t(BrightMailStrings.Inbox_Title)}
-        </Typography>
+        <Typography variant="h6">{t(BrightMailStrings.Inbox_Title)}</Typography>
         <Typography variant="body2" aria-live="polite">
           {t(BrightMailStrings.Loading)}
         </Typography>
@@ -340,9 +339,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
   if (state.error) {
     return (
       <Box data-testid="inbox-error">
-        <Typography variant="h6">
-          {t(BrightMailStrings.Inbox_Title)}
-        </Typography>
+        <Typography variant="h6">{t(BrightMailStrings.Inbox_Title)}</Typography>
         <Alert severity="error" role="alert">
           {t(BrightMailStrings.Inbox_Error)}
         </Alert>
@@ -362,9 +359,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
   if (state.emails.length === 0) {
     return (
       <Box data-testid="inbox-empty">
-        <Typography variant="h6">
-          {t(BrightMailStrings.Inbox_Title)}
-        </Typography>
+        <Typography variant="h6">{t(BrightMailStrings.Inbox_Title)}</Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
           {t(BrightMailStrings.Inbox_Empty)}
         </Typography>
@@ -372,9 +367,10 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
     );
   }
 
-  const unreadText = t(
-    BrightMailStrings.Inbox_UnreadCountTemplate,
-  ).replace('{COUNT}', String(state.unreadCount));
+  const unreadText = t(BrightMailStrings.Inbox_UnreadCountTemplate).replace(
+    '{COUNT}',
+    String(state.unreadCount),
+  );
 
   const bulkDeleteMessage = t(
     BrightMailStrings.Delete_ConfirmBulkTemplate,
@@ -388,9 +384,7 @@ const InboxView: FC<InboxViewProps> = ({ folder = 'inbox' }) => {
         justifyContent="space-between"
         mb={1}
       >
-        <Typography variant="h6">
-          {t(BrightMailStrings.Inbox_Title)}
-        </Typography>
+        <Typography variant="h6">{t(BrightMailStrings.Inbox_Title)}</Typography>
         <Typography
           variant="body2"
           color="text.secondary"

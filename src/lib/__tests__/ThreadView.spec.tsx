@@ -18,6 +18,9 @@ import {
   waitFor,
 } from '@testing-library/react';
 
+// Import after mocks
+import ThreadView from '../ThreadView';
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockNavigate = jest.fn();
@@ -76,34 +79,27 @@ jest.mock('@digitaldefiance/express-suite-react-components', () => ({
   }),
 }));
 
-const mockSendEmail = jest.fn();
-const mockQueryInbox = jest.fn();
-const mockGetEmail = jest.fn();
-const mockGetEmailContent = jest.fn();
-const mockGetEmailThread = jest.fn();
-const mockGetDeliveryStatus = jest.fn();
-const mockReplyToEmail = jest.fn();
-const mockForwardEmail = jest.fn();
-const mockMarkAsRead = jest.fn();
-const mockDeleteEmail = jest.fn();
-const mockGetUnreadCount = jest.fn();
-
-jest.mock('../hooks/useEmailApi', () => ({
-  __esModule: true,
-  useEmailApi: () => ({
-    sendEmail: mockSendEmail,
-    queryInbox: mockQueryInbox,
-    getEmail: mockGetEmail,
-    getEmailContent: mockGetEmailContent,
-    getEmailThread: mockGetEmailThread,
-    getDeliveryStatus: mockGetDeliveryStatus,
-    replyToEmail: mockReplyToEmail,
-    forwardEmail: mockForwardEmail,
-    markAsRead: mockMarkAsRead,
-    deleteEmail: mockDeleteEmail,
-    getUnreadCount: mockGetUnreadCount,
-  }),
-}));
+jest.mock('../hooks/useEmailApi', () => {
+  // Stable object created once inside the factory — avoids re-creation on each call
+  const api = {
+    sendEmail: jest.fn(),
+    queryInbox: jest.fn(),
+    getEmail: jest.fn(),
+    getEmailContent: jest.fn(),
+    getEmailThread: jest.fn(),
+    getDeliveryStatus: jest.fn(),
+    replyToEmail: jest.fn(),
+    forwardEmail: jest.fn(),
+    markAsRead: jest.fn(),
+    deleteEmail: jest.fn(),
+    getUnreadCount: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    useEmailApi: () => api,
+    _getMockApi: () => api,
+  };
+});
 
 const mockOpenCompose = jest.fn();
 
@@ -121,22 +117,10 @@ jest.mock('../BrightMailContext', () => ({
   }),
 }));
 
-// Import after mocks
-import ThreadView from '../ThreadView';
-
-const mockedApi = {
-  sendEmail: mockSendEmail,
-  queryInbox: mockQueryInbox,
-  getEmail: mockGetEmail,
-  getEmailContent: mockGetEmailContent,
-  getEmailThread: mockGetEmailThread,
-  getDeliveryStatus: mockGetDeliveryStatus,
-  replyToEmail: mockReplyToEmail,
-  forwardEmail: mockForwardEmail,
-  markAsRead: mockMarkAsRead,
-  deleteEmail: mockDeleteEmail,
-  getUnreadCount: mockGetUnreadCount,
-};
+const mockedApi = require('../hooks/useEmailApi')._getMockApi() as Record<
+  string,
+  jest.Mock
+>;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

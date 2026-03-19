@@ -8,7 +8,9 @@
  */
 import '@testing-library/jest-dom';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import React from 'react';
+
+// Import after mocks
+import Sidebar, { SidebarProps } from '../Sidebar';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -50,9 +52,6 @@ jest.mock('@digitaldefiance/express-suite-react-components', () => ({
     currentLanguage: 'en',
   }),
 }));
-
-// Import after mocks
-import Sidebar, { SidebarProps } from '../Sidebar';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -179,10 +178,9 @@ describe('Sidebar', () => {
     expect(document.activeElement).toBe(navItems[0]);
 
     // Press ArrowDown
-    fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
-      { key: 'ArrowDown' },
-    );
+    fireEvent.keyDown(screen.getByRole('menu', { name: 'Nav_MailFolders' }), {
+      key: 'ArrowDown',
+    });
     expect(document.activeElement).toBe(navItems[1]);
   });
 
@@ -193,10 +191,9 @@ describe('Sidebar', () => {
     navItems[1].focus();
 
     // Press ArrowUp
-    fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
-      { key: 'ArrowUp' },
-    );
+    fireEvent.keyDown(screen.getByRole('menu', { name: 'Nav_MailFolders' }), {
+      key: 'ArrowUp',
+    });
     expect(document.activeElement).toBe(navItems[0]);
   });
 
@@ -206,10 +203,9 @@ describe('Sidebar', () => {
     // Focus the last item
     navItems[navItems.length - 1].focus();
 
-    fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
-      { key: 'ArrowDown' },
-    );
+    fireEvent.keyDown(screen.getByRole('menu', { name: 'Nav_MailFolders' }), {
+      key: 'ArrowDown',
+    });
     expect(document.activeElement).toBe(navItems[0]);
   });
 
@@ -219,10 +215,9 @@ describe('Sidebar', () => {
     // Focus the first item
     navItems[0].focus();
 
-    fireEvent.keyDown(
-      screen.getByRole('menu', { name: 'Nav_MailFolders' }),
-      { key: 'ArrowUp' },
-    );
+    fireEvent.keyDown(screen.getByRole('menu', { name: 'Nav_MailFolders' }), {
+      key: 'ArrowUp',
+    });
     expect(document.activeElement).toBe(navItems[navItems.length - 1]);
   });
 
