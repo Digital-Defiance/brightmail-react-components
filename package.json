@@ -43,5 +43,20 @@
     "build": "npx nx build brightmail-react-components",
     "test": "npx nx test brightmail-react-components",
     "lint": "npx nx lint brightmail-react-components"
+  },
+  "devDependencies": {
+    "@digitaldefiance/express-suite-react-components": "^4.26.2",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
+    "@tiptap/extension-link": "^3.22.2",
+    "@tiptap/extension-underline": "^3.22.2",
+    "@tiptap/react": "^3.22.2",
+    "@tiptap/starter-kit": "^3.22.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "axios": "^1.14.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.14.0"
   }
 }
