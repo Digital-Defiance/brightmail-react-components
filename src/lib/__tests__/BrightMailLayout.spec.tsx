@@ -62,6 +62,11 @@ jest.mock('@brightchain/brightchain-lib', () => ({
     {},
     { get: (_t: unknown, p: string | symbol) => String(p) },
   ),
+  THEME_COLORS: {
+    CHAIN_BLUE: '#1976d2',
+    CHAIN_BLUE_LIGHT: '#46b6fd',
+    CHAIN_BLUE_DARK: '#0a60d0',
+  },
   MessageEncryptionScheme: {
     NONE: 'none',
     SHARED_KEY: 'shared_key',
@@ -83,11 +88,78 @@ jest.mock('@brightchain/brightmail-lib', () => ({
   ),
 }));
 
-jest.mock('@brightchain/brightchain-react-components', () => ({
-  BrightChainSubLogo: ({ subText }: { subText?: string }) => (
-    <span data-testid="brightchain-sub-logo">{subText || 'SubLogo'}</span>
-  ),
-}));
+jest.mock('@brightchain/brightchain-react-components', () => {
+  const React = require('react');
+  return {
+    BrightChainSubLogo: ({ subText }: { subText?: string }) => (
+      <span data-testid="brightchain-sub-logo">{subText || 'SubLogo'}</span>
+    ),
+    LayoutShell: ({
+      brandConfig,
+      sidebar,
+      toolbarActions,
+      subBar,
+      detailPanel,
+      children,
+    }: {
+      brandConfig: { appName: string; logo?: React.ReactNode; primaryColor: string };
+      sidebar?: {
+        items: { route: string; label: string; icon: React.ReactNode }[];
+        header?: React.ReactNode;
+        footer?: React.ReactNode;
+        ariaLabel?: string;
+        onNavigate?: (route: string) => void;
+      };
+      toolbarActions?: React.ReactNode;
+      subBar?: React.ReactNode;
+      detailPanel?: React.ReactNode;
+      children?: React.ReactNode;
+    }) => {
+      const useMediaQuery = require('@mui/material/useMediaQuery');
+      const isDesktop = useMediaQuery('(min-width:961px)');
+      const isWideDesktop = useMediaQuery('(min-width:1280px)');
+      const [sidebarOpen, setSidebarOpen] = React.useState(false);
+      return (
+        <div data-testid="layout-shell">
+          <div data-testid="layout-appbar">
+            {!isDesktop && sidebar && (
+              <button
+                aria-label="Toggle navigation"
+                onClick={() => setSidebarOpen((p: boolean) => !p)}
+                data-testid="layout-hamburger"
+              />
+            )}
+            {brandConfig.logo || <span>{brandConfig.appName}</span>}
+            {toolbarActions}
+          </div>
+          {subBar}
+          <div style={{ display: 'flex' }}>
+            {sidebar && (
+              <div data-testid="app-sidebar-drawer">
+                {sidebar.header}
+                <ul role="menu" aria-label={sidebar.ariaLabel}>
+                  {sidebar.items.map((item: { route: string; label: string; icon: React.ReactNode }) => (
+                    <li key={item.route} role="menuitem">
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </li>
+                  ))}
+                </ul>
+                {sidebar.footer}
+              </div>
+            )}
+            <main data-testid="layout-content-area">
+              {children || <div data-testid="outlet">Outlet Content</div>}
+            </main>
+            {isWideDesktop && detailPanel && (
+              <div data-testid="layout-detail-panel">{detailPanel}</div>
+            )}
+          </div>
+        </div>
+      );
+    },
+  };
+});
 
 jest.mock('@tiptap/react', () => ({
   useEditor: () => null,
@@ -175,8 +247,8 @@ describe('BrightMailLayout', () => {
   it('renders Sidebar with navigation on desktop', () => {
     setBreakpoint('desktop');
     render(<BrightMailLayout />);
-    // Sidebar renders the logo
-    expect(screen.getByTestId('brightchain-sub-logo')).toBeInTheDocument();
+    // Sidebar and AppBar both render the logo
+    expect(screen.getAllByTestId('brightchain-sub-logo').length).toBeGreaterThanOrEqual(1);
     // Sidebar renders nav items
     expect(screen.getByText('Nav_Inbox')).toBeInTheDocument();
     expect(screen.getByText('Nav_Sent')).toBeInTheDocument();
@@ -190,7 +262,7 @@ describe('BrightMailLayout', () => {
   it('shows hamburger toggle button on narrow viewports', () => {
     setBreakpoint('mobile');
     render(<BrightMailLayout />);
-    const hamburger = screen.getByLabelText('Toggle sidebar');
+    const hamburger = screen.getByLabelText('Toggle navigation');
     expect(hamburger).toBeInTheDocument();
   });
 
@@ -200,7 +272,7 @@ describe('BrightMailLayout', () => {
   it('does not show hamburger on desktop viewports', () => {
     setBreakpoint('desktop');
     render(<BrightMailLayout />);
-    expect(screen.queryByLabelText('Toggle sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Toggle navigation')).not.toBeInTheDocument();
   });
 
   /**
